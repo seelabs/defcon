@@ -1,0 +1,317 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+################################################################################
+# Global variables that control the build versions of base components
+
+# cpp_dev versions
+UBUNTU_VERSION=18.04
+GCC_VERSION=8.2.0
+CMAKE_VERSION=3.13.2
+CLANG_VERSION=7
+GDB_VERSION=8.2
+
+# emacs
+EMACS_VERSION=26.1
+
+# rippled_dev
+BOOST_VERSION=1.68.0
+
+################################################################################
+
+scripts_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+proj_dir=$(realpath "${scripts_dir}/..")
+dockerfiles_dir=$(realpath "${proj_dir}/dockerfiles")
+user_shell=bash
+CONTAINER_VERSION=0.1
+GITHUB_REPO=ripple
+GIT_BRANCH=master
+
+################################################################################
+
+valid_commands=(create run push)
+valid_components=(base rippled-dev user-dev rippled-deploy rippled-dogfood)
+
+function usage(){
+    echo "Usage: ${BASH_SOURCE[0]} command component [options]"
+    echo "Valid commands are: ${valid_commands[@]}"
+    echo "Valid components are: ${valid_components[@]}"
+    echo "Valid options are: "
+    echo " -t container_tag : specify the container tag"
+    echo " -v container_version : specify the container version"
+    echo " -s user_shell : specify the user shell"
+    echo " -r github_repo : git repository"
+    echo " -b git_branch : git branch"
+    echo " -f : force command even if it will overwrite previous containers"
+}
+
+# check if an array contain a value
+# first parameter is element to match
+# second parameter is array
+function array_contains(){
+    local e match="$1"
+    shift
+    for e; do [[ "$e" == "$match" ]] && return 0; done
+    return 1
+}
+
+
+function create_base() {
+    # must specify container version (get last known version from command line)
+    # option to create latest tag
+    # can not specify a tag, only a container version
+
+    # build cpp_dev
+    docker build \
+           --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+           --build-arg GCC_VERSION=${GCC_VERSION} \
+           --build-arg CMAKE_VERSION=${CMAKE_VERSION} \
+           --build-arg CLANG_VERSION=${CLANG_VERSION} \
+           --build-arg GDB_VERSION=${GDB_VERSION} \
+           -t seelabs/cpp_dev:${CONTAINER_VERSION} \
+           -f ${dockerfiles_dir}/cpp_dev/Dockerfile \
+           ${proj_dir}
+
+    # build emacs_cpp_dev
+    sudo bash -c "echo 0 > /proc/sys/kernel/randomize_va_space"
+    docker build \
+           --build-arg CPP_DEV_VERSION=${CONTAINER_VERSION} \
+           --build-arg EMACS_VERSION=${EMACS_VERSION} \
+           -t seelabs/emacs_cpp_dev:${CONTAINER_VERSION} \
+           -f ${dockerfiles_dir}/emacs_cpp_dev/Dockerfile \
+           ${proj_dir}
+    sudo bash -c "echo 2 > /proc/sys/kernel/randomize_va_space"
+
+    # build rippled_dev_base
+    docker build \
+           --build-arg EMACS_CPP_DEV_VERSION=${CONTAINER_VERSION} \
+           --build-arg BOOST_VERSION=${BOOST_VERSION} \
+           -t seelabs/rippled_dev_base:${CONTAINER_VERSION} \
+           -f ${dockerfiles_dir}/rippled_dev_base/Dockerfile \
+           ${proj_dir}
+}
+
+function create_rippled_dev() {
+    # build rippled_dev
+    docker build \
+           --build-arg RIPPLED_DEV_BASE_VERSION=${CONTAINER_VERSION} \
+           --build-arg GITHUB_REPO=${GITHUB_REPO} \
+           --build-arg GIT_BRANCH=${GIT_BRANCH} \
+           -t rippled_dev-${GITHUB_REPO}-${GIT_BRANCH}:${CONTAINER_VERSION} \
+           -f ${dockerfiles_dir}/rippled_dev/Dockerfile \
+           ${proj_dir}
+}
+
+function create_user_dev() {
+    # container that binds the user's home directory to the container
+
+    # build user_dev_env
+    docker build \
+           --build-arg BASE_LAYER=seelabs/rippled_dev_base:${CONTAINER_VERSION} \
+           --build-arg USER_ID=$(id -u) \
+           --build-arg GROUP_ID=$(id -g) \
+           --build-arg USER_NAME=$(whoami) \
+           --build-arg USER_SHELL=${user_shell} \
+           -t user_dev_env:${CONTAINER_VERSION} \
+           -f ${dockerfiles_dir}/user_dev_env/Dockerfile \
+           ${proj_dir}
+}
+
+function create_rippled_deploy() {
+    # container with a rippled exe and binds to a container for the database and config
+    # make exe part of the volume so core files are contained there
+    # must specify a tag
+    echo "Not implemented"
+}
+
+function create_rippled_dogfood() {
+    # container with two volumens: one for rippled exe, source code, and debug tools. core dumps here and transfer to dev machine.
+    # container for db and log
+    echo "Not implemented"
+}
+
+function run_rippled_dev(){
+    local name="rippled_dev-${GITHUB_REPO}-${GIT_BRANCH}${RANDOM}" \
+    docker run -it \
+           -p 51235:51235 \
+           --mount type=volume,source=opt_rippled_bld,target=/opt/rippled_bld \
+           --mount type=volume,source=opt_rippled,target=/opt/rippled \
+           --cap-add=SYS_PTRACE `# for gdb` \
+           --name ${name} \
+           rippled_dev-${GITHUB_REPO}-${GIT_BRANCH}:${CONTAINER_VERSION} \
+           /bin/bash
+    docker container rm ${name}
+}
+
+function run_user_dev(){
+    local name="user_dev_env${RANDOM}"
+    docker run -it \
+           -p 51235:51235 \
+           --mount type=bind,source="/home/$(whoami)",target=/home/$(whoami) \
+           --user=$(id -u):$(id -g) \
+           --cap-add=SYS_PTRACE `# for gdb and rr` \
+           --security-opt seccomp=unconfined `# for rr` \
+           -v /tmp/.X11-unix:/tmp/.X11-unix `# for gui programs` \
+           -e DISPLAY=unix$DISPLAY \
+           --device /dev/snd `# for sound` \
+           --name ${name} \
+           user_dev_env:0.1 \
+           ${user_shell}
+    docker container rm ${name}
+}
+
+function push() {
+    # option to create latest tag
+    echo "Not implemented"
+}
+
+################################################################################
+# main
+
+if [[ $# -lt 2 ]]; then
+    echo "Error: Too few arguments: $#"
+    usage
+    exit 1
+fi
+
+command=${1}; shift;
+component=${1}; shift;
+
+if ! array_contains ${command} "${valid_commands[@]}"; then
+    echo "Invalid command: ${command}"
+    usage
+    exit 1
+fi
+
+if ! array_contains ${component} "${valid_components[@]}"; then
+    echo "Invalid component: ${component}"
+    usage
+    exit 1
+fi
+
+while getopts ":s:v:r:b:" opt; do
+    case ${opt} in
+        s)
+            user_shell=${OPTARG}
+            ;;
+        v)
+            CONTAINER_VERSION=${OPTARG}
+            ;;
+        r)
+            GITHUB_REPO=${OPTARG}
+            ;;
+        b)
+            GIT_BRANCH=${OPTARG}
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+case ${user_shell} in
+    "bash")
+        user_shell="/bin/bash"
+        ;;
+    "zsh")
+        user_shell="/usr/bin/zsh"
+        ;;
+esac
+
+case ${command} in
+    create)
+        case ${component} in
+            base)
+                create_base
+                exit 0
+                ;;
+            rippled-dev)
+                create_rippled_dev
+                exit 0
+                ;;
+            user-dev)
+                create_user_dev
+                exit 0
+                ;;
+            rippled-deploy)
+                create_rippled_deploy
+                exit 0
+                ;;
+            rippled-dogfood)
+                create_rippled_dogfood
+                exit 0
+                ;;
+            \?)
+                echo "Invalid component: ${component}"
+                usage
+                exit 1
+                ;;
+        esac
+        ;;
+    run)
+        case ${component} in
+            base)
+                run_base
+                exit 0
+                ;;
+            rippled-dev)
+                run_rippled_dev
+                exit 0
+                ;;
+            user-dev)
+                run_user_dev
+                exit 0
+                ;;
+            rippled-deploy)
+                run_rippled_deploy
+                exit 0
+                ;;
+            rippled-dogfood)
+                run_rippled_dogfood
+                exit 0
+                ;;
+            \?)
+                echo "Invalid component: ${component}"
+                usage
+                exit 1
+                ;;
+        esac
+        ;;
+    push)
+        case ${component} in
+            base)
+                push_base
+                exit 0
+                ;;
+            rippled-dev)
+                push_rippled_dev
+                exit 0
+                ;;
+            user-dev)
+                push_user_dev
+                exit 0
+                ;;
+            rippled-deploy)
+                push_rippled_deploy
+                exit 0
+                ;;
+            rippled-dogfood)
+                push_rippled_dogfood
+                exit 0
+                ;;
+            \?)
+                echo "Invalid component: ${component}"
+                usage
+                exit 1
+                ;;
+        esac
+        ;;
+    \?)
+        echo "Invalid command: ${command}"
+        usage
+        exit 1
+        ;;
+esac
