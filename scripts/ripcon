@@ -31,7 +31,7 @@ GIT_BRANCH=master
 ################################################################################
 
 valid_commands=(create run push)
-valid_components=(base rippled-dev user-dev rippled-deploy rippled-dogfood)
+valid_components=(base rippled-dev user-dev rippled-deploy rippled-dogfood postgres)
 
 function usage(){
     echo "Usage: ${BASH_SOURCE[0]} command component [options]"
@@ -131,12 +131,22 @@ function create_rippled_dogfood() {
     echo "Not implemented"
 }
 
+function create_postgres() {
+    # build rippled_dev
+    docker build \
+           --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+           -t seelabs/postgres:${CONTAINER_VERSION} \
+           -f ${dockerfiles_dir}/postgres/Dockerfile \
+           ${proj_dir}
+}
+
+
 function run_rippled_dev(){
     local name="rippled_dev-${GITHUB_REPO}-${GIT_BRANCH}${RANDOM}" \
     docker run -it \
            -p 51235:51235 \
-           --mount type=volume,source=opt_rippled_bld,target=/opt/rippled_bld \
-           --mount type=volume,source=opt_rippled,target=/opt/rippled \
+           --mount type=volume,source=rippled_opt_bld,target=/opt/rippled_bld \
+           --mount type=volume,source=rippled_opt,target=/opt/rippled \
            --cap-add=SYS_PTRACE `# for gdb` \
            --name ${name} \
            rippled_dev-${GITHUB_REPO}-${GIT_BRANCH}:${CONTAINER_VERSION} \
@@ -159,6 +169,18 @@ function run_user_dev(){
            user_dev_env:0.1 \
            ${user_shell}
     docker container rm ${name}
+}
+
+function run_postgres(){
+    local name="ripcon_postgres${RANDOM}"
+    docker run -it \
+           -P \
+           --mount type=volume,source=postgres_etc,target=/etc/postgresql \
+           --mount type=volume,source=postgres_var_log,target=/var/log/postgresql \
+           --mount type=volume,source=postgres_var_lib,target=/var/lib/postgresql \
+           --rm \
+           --name ${name} \
+           seelabs/postgres:${CONTAINER_VERSION}
 }
 
 function push() {
@@ -244,6 +266,10 @@ case ${command} in
                 create_rippled_dogfood
                 exit 0
                 ;;
+            postgres)
+                create_postgres
+                exit 0
+                ;;
             \?)
                 echo "Invalid component: ${component}"
                 usage
@@ -271,6 +297,10 @@ case ${command} in
                 ;;
             rippled-dogfood)
                 run_rippled_dogfood
+                exit 0
+                ;;
+            postgres)
+                run_postgres
                 exit 0
                 ;;
             \?)
