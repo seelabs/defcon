@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+# Convenience functions for the postgres container
+
+set -eo pipefail
+
+valid_commands=(psql port)
+
+function usage(){
+    echo "Usage: ${BASH_SOURCE[0]} command"
+    echo "Valid commands are: ${valid_commands[@]}"
+}
+
+# check if an array contain a value
+# first parameter is element to match
+# second parameter is array
+function array_contains(){
+    local e match="$1"
+    shift
+    for e; do [[ "$e" == "$match" ]] && return 0; done
+    return 1
+}
+
+
+function container_port(){
+    # the postgres port exposed to the local host will not be deterministic.
+    # This convience function finds the exposed port
+    docker ps --filter "name=ripcon_postgres" --format "{{.Ports}}" | sed -e 's/.*:\(.*\)->.*/\1/'
+}
+
+function run_psql(){
+    psql -h localhost -p $(container_port) -d docker -U docker --password
+}
+
+################################################################################
+# main
+
+if [[ $# -ne 1 ]]; then
+    echo "Error: Expected exactly one argument: $#"
+    usage
+    exit 1
+fi
+
+command=${1}; shift;
+
+if ! array_contains ${command} "${valid_commands[@]}"; then
+    echo "Invalid command: ${command}"
+    usage
+    exit 1
+fi
+
+case ${command} in
+    psql)
+        run_psql
+        exit 0
+        ;;
+    port)
+        container_port
+        exit 0
+        ;;
+    \?)
+        echo "Invalid command: ${command}"
+        usage
+        exit 1
+        ;;
+esac

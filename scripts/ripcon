@@ -172,7 +172,7 @@ function run_user_dev(){
 }
 
 function run_postgres(){
-    local name="ripcon_postgres${RANDOM}"
+    local name="ripcon_postgres"
     docker run -it \
            -P \
            --mount type=volume,source=postgres_etc,target=/etc/postgresql \
