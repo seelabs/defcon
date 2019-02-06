@@ -1,0 +1,36 @@
+true ${POSTGRES_VERSION:=10}
+
+function postgres_image_name() {
+    if [[ ${#} -gt 1 ]]; then
+        echo "Error: invalid parameter in postgres_image_name: ${@}"
+    fi
+    if [[ ${1} = "latest" ]]; then
+        echo "seelabs/postgres:latest_ubuntu-latest"
+    elif [[ -n ${1} ]]; then
+        echo "Error: invalid parameter in postgres_image_name: ${@}"
+    else
+        echo "seelabs/postgres:${POSTGRES_VERSION}_ubuntu-${UBUNTU_VERSION}"
+    fi
+}
+
+function create_postgres() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+    docker build \
+           --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+           --build-arg POSTGRES_VERSION=${POSTGRES_VERSION} \
+           -t $(postgres_image_name) \
+           -f ${this_dir}/ubuntu_dockerfile \
+           ${proj_dir}
+}
+
+function run_postgres(){
+    local name="ripcon_postgres"
+    docker run -it \
+           -P \
+           --mount type=volume,source=postgres_etc,target=/etc/postgresql \
+           --mount type=volume,source=postgres_var_log,target=/var/log/postgresql \
+           --mount type=volume,source=postgres_var_lib,target=/var/lib/postgresql \
+           --rm \
+           --name ${name} \
+           $(postgres_image_name ${@})
+}

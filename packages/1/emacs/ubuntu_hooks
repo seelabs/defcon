@@ -1,0 +1,32 @@
+true ${EMACS_VERSION:=26.1}
+
+function emacs_image_name() {
+    if [[ ${#} -gt 1 ]]; then
+        echo "Error: invalid parameter in emacs_image_name: ${@}"
+    fi
+    if [[ ${1} = "latest" ]]; then
+        echo "seelabs/emacs:latest_gcc-latest_ubuntu-latest"
+    elif [[ -n ${1} ]]; then
+        echo "Error: invalid parameter in emacs_image_name: ${@}"
+    else
+        echo "seelabs/emacs:${EMACS_VERSION}_gcc-${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}"
+    fi
+}
+
+function create_emacs() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+    if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
+        if [[ $(cat /proc/sys/kernel/randomize_va_space) != 0 ]]; then
+           echo "Building emacs requires that randomize_va_space is disabled"
+           exit 1
+        fi
+    fi
+
+    docker build \
+           --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+           --build-arg GCC_VERSION=${GCC_VERSION} \
+           --build-arg EMACS_VERSION=${EMACS_VERSION} \
+           -t $(emacs_image_name) \
+           -f ${this_dir}/ubuntu_dockerfile \
+           ${proj_dir}
+}

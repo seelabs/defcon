@@ -1,0 +1,15 @@
+################################################################################
+ARG UBUNTU_VERSION
+ARG GCC_VERSION
+FROM seelabs/gcc:${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}
+
+################################################################################
+
+ARG QT_VERSION
+
+RUN mkdir -p /opt/docker_builds/qt
+WORKDIR /opt/docker_builds/qt
+COPY ./packages/1/qt/ubuntu_qt.sh qt.sh
+RUN /bin/bash qt.sh ${QT_VERSION}
+
+################################################################################

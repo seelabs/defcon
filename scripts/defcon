@@ -1,0 +1,531 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+################################################################################
+# Global variables that control the build versions of base components
+
+UBUNTU_VERSION=18.04
+
+################################################################################
+
+scripts_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+proj_dir=$(realpath "${scripts_dir}/..")
+dockerfiles_dir=$(realpath "${proj_dir}/dockerfiles")
+packages_dir=$(realpath "${scripts_dir}/../packages")
+options_file=""
+
+################################################################################
+
+# package name to a package path
+declare -A package_path
+
+# package name to a package priority
+declare -A package_priority
+
+# package priority to space delimited string of package names
+declare -A packages_at_priority
+
+function is_valid_package_dir(){
+    local this_package_dir=${1}
+    [[ -d ${this_package_dir} && -f ${this_package_dir}/ubuntu_hooks ]]
+}
+
+function is_valid_package(){
+    [[ -n ${package_path[${1}]} ]]
+}
+
+function is_valid_package_priority(){
+    [[ ${1} =~ ^[0-9]$ ]]
+}
+
+# given a directory containing packages and the priority for all the packages
+# in the directory, populate the packages array
+function populate_package_arrays_dir_and_priority(){
+    local d=${1}
+    local priority=${2}
+    if ! is_valid_package_priority ${priority}; then
+        echo "Invalid package priority ${priority}"
+        exit 1
+    fi
+    for p in $(ls ${d}); do
+        if $(is_valid_package_dir ${d}/${p}); then
+            if [[ -n ${package_priority[${p}]} ]]; then
+                echo "Error: Duplicate package ${p} detected"
+                exit 1
+            fi
+            package_priority[${p}]=${priority}
+            package_path[${p}]=$(realpath ${d}/${p})
+            packages_at_priority[${priority}]+=" ${p}"
+        fi
+    done
+}
+
+function populate_package_arrays(){
+    local d=${1}
+    local p
+    for p in $(ls ${d}); do
+        if is_valid_package_priority ${p}; then
+            populate_package_arrays_dir_and_priority ${d}/${p} ${p}
+        fi
+    done
+}
+
+# for all the packages at a lower or equal priority level, source those packages hooks
+function source_package_hooks_for_priority(){
+    local max_priority=${1}
+    local priority
+    for priority in $(seq ${max_priority} -1 0); do
+        local to_source
+        for to_source in ${packages_at_priority[${priority}]}; do
+            source ${package_path[${to_source}]}/ubuntu_hooks
+        done
+    done
+}
+
+# source a packages's hooks files,
+# and for all the packages at a lower or equal priority level, source those packages hooks as well
+function source_package_hooks(){
+    package=${1}
+    if [[ -z ${package_priority[${package}]} ]]; then
+        echo "Error: Invalid package in source_package_and_ancestors_hooks: ${package}"
+        exit 1
+    fi
+    source_package_hooks_for_priority ${package_priority[${package}]}
+}
+
+################################################################################
+# Functions to substitute json parameters into template files
+
+# Given a template file with placeholders of the form <%name%> and a json values file,
+# remplace the placeholders with the values in the json file and put the output in the out_file.
+function fill_template() {
+    if [[ ${#} -ne 3 ]]; then
+        echo "Fill template requires a template_file, values_file, and out_file"
+        exit 1
+    fi
+    local template_file=${1}; shift
+    local values_file=${1}; shift
+    local out_file=${1}; shift
+
+    local tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
+    local sed_script=${tmpdir}/fill_template.sed
+
+    local placeholder
+    local replacement=""
+    for placeholder in $(grep -oE '<%.*%>' ${template_file} | grep -oE '[a-zA-Z0-9_]+'); do
+        replacement=$(cat rippled_user_dev.json| jq -r ".${placeholder}[]?")
+        echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    done
+
+    sed -f ${sed_script} ${template_file} > ${out_file}
+
+    rm -fr tmpdir
+}
+
+# Check if the json values file has the specified key set to true
+function is_json_config_key_on() {
+    if [[ ${#} -ne 2 ]]; then
+        echo "is_json_config_key_on must specify values_file and key. Got: ${@}"
+        exit 1
+    fi
+    local values_file=${1}; shift
+    local key=${1}; shift
+    [[ $(cat ${values_file} | jq ".${key}?") = true ]]
+}
+
+function dockerfile_from_template() {
+    if [[ ${#} -ne 3 ]]; then
+        echo "dockerfile_from_template must specify template_file, values_file, and out file. Got: ${@}"
+        exit 1
+    fi
+
+    local template_file=${1}; shift
+    local values_file=${1}; shift
+    local out_file=${1}; shift
+    local tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
+    local sed_script=${tmpdir}/fill_template.sed
+
+    local placeholder
+    local replacement
+    placeholder=base_layer
+    local base_project=$(cat ${values_file} | jq -r ".base_project?")
+    if [[ -z ${base_project} || ${base_project} = null ]]; then
+        echo "Error: Json file ${values_file} does not specify a base project."
+        exit 1
+    fi
+    replacement=$(${base_project}_image_name base)
+    echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    placeholder=apt_packages
+    replacement=$(cat ${values_file} | jq -r ".packages.apt[]?" | paste -s -d ' ')
+    echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    placeholder=with_user_home
+    replacement=""
+    if ! is_json_config_key_on ${values_file} with_user_home; then
+        echo "s!<%${placeholder}%>!!g" >> ${sed_script}
+    else
+        local user_id=$(id -u)
+        local group_id=$(id -g)
+        local user_name=$(whoami)
+        local user_shell=${SHELL}
+
+        cat <<EOF > ${proj_dir}/sudoers.txt
+root ALL=(ALL) ALL
+${user_name} ALL=(ALL) NOPASSWD: ALL
+Defaults    env_reset
+Defaults    secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EOF
+
+        echo "s!<%${placeholder}%>!\\" >> ${sed_script}
+        cat <<EOF >> ${sed_script}
+ADD /sudoers.txt /etc/sudoers\\
+RUN chmod 440 /etc/sudoers\\
+RUN useradd -l -d /home/${user_name} -s ${user_shell} -u ${user_id} -G sudo ${user_name}\\
+USER ${user_name}\\
+WORKDIR /home/${user_name}\\
+EOF
+        echo "!g" >> ${sed_script}
+    fi
+
+    local defcon_packages=$(cat ${values_file} | jq -r '.packages.defcon[]?')
+    if [[ -z ${defcon_packages} ]]; then
+        echo "s!<%defcon_packages_preamble%>!!g" >> ${sed_script}
+        echo "s!<%defcon_packages_postscript%>!!g" >> ${sed_script}
+    else
+        local p
+        echo "s!<%defcon_packages_preamble%>!\\" >> ${sed_script}
+        for p in ${defcon_packages}; do
+            echo "from $(${p}_image_name) as ${p}\\" >> ${sed_script}
+        done
+        echo "!g" >> ${sed_script}
+        echo "s!<%defcon_packages_postscript%>!\\" >> ${sed_script}
+        # use \& to escape & in the sed pattern. '&' by itself is the matched regex
+        for p in ${defcon_packages}; do
+            cat <<EOF >> ${sed_script}
+RUN mkdir -p /opt/docker_builds\\
+COPY --from=${p} /opt/docker_builds/${p} /opt/docker_builds/${p}\\
+RUN cd /opt/docker_builds/${p} \&\& ./${p}.sh install \&\& cd / \&\& rm -fr /opt/docker_builds/${p}\\
+EOF
+        done
+        echo "!g" >> ${sed_script}
+    fi
+
+    local data=$(cat ${values_file} | jq -cr '.data[]?')
+    if [[ -z ${data} ]]; then
+        echo "s!<%data%>!!g" >> ${sed_script}
+    else
+        echo "s!<%data%>!\\" >> ${sed_script}
+        local i
+        for i in ${data}; do
+            local target=$(echo "${i}" | jq -cr '.target')
+            local source=$(echo "${i}" | jq -cr '.source')
+            local repo=$(echo "${i}" | jq -cr '.source.repository?')
+            local branch=$(echo "${i}" | jq -cr '.source.branch?')
+            if [[ -z ${repo} && -z ${branch} ]]; then
+                echo "RUN mkdir -p $(dirname ${target})\\" >> ${sed_script}
+                echo "COPY ${source} ${target}\\" >> ${sed_script}
+            else
+                local repo_dir=$(basename ${repo%.*})
+                cat <<EOF >> ${sed_script}
+RUN mkdir -p ${target} \&\& cd ${target} \&\& git clone --recursive ${repo} \&\& cd ${repo_dir} \&\& git checkout ${branch} \\
+EOF
+            fi
+        done
+        echo "!g" >> ${sed_script}
+    fi
+
+    local volumes=$(cat ${values_file} | jq -cr '.volumes[]?')
+    if [[ -z ${volumes} ]]; then
+        echo "s!<%volumes%>!!g" >> ${sed_script}
+    else
+        echo "s!<%volumes%>!\\" >> ${sed_script}
+        local v
+        for v in ${volumes}; do
+            echo "VOLUME ${v}\\" >> ${sed_script}
+        done
+        echo "!g" >> ${sed_script}
+    fi
+
+    sed -f ${sed_script} ${template_file} > ${out_file}
+
+    rm -fr ${tmpdir}
+}
+
+function extra_docker_flags(){
+    if [[ ${#} -ne 2 ]]; then
+        echo "extra_docker_flags must specify command and values_values files. Got: ${@}"
+        exit 1
+    fi
+
+    local command=${1}; shift
+    local values_file=${1}; shift
+    local result=""
+
+    case ${command} in
+        create)
+            ;;
+        run)
+            if is_json_config_key_on ${values_file} with_user_home; then
+                result+=" --mount type=bind,source=/home/$(whoami),target=/home/$(whoami)"
+                result+=" --user=$(id -u):$(id -g)"
+            fi
+            if is_json_config_key_on ${values_file} with_gui; then
+                result+=" -v /tmp/.X11-unix:/tmp/.X11-unix"
+                result+=" -e DISPLAY=unix$DISPLAY"
+            fi
+            if is_json_config_key_on ${values_file} with_sound; then
+                result+=" --device /dev/snd"
+            fi
+            if is_json_config_key_on ${values_file} with_debugger; then
+                result+=" --cap-add=SYS_PTRACE"
+            fi
+            if is_json_config_key_on ${values_file} with_reverse_debugger; then
+                result+=" --security-opt seccomp=unconfined"
+            fi
+            local port
+            for port in $(cat ${values_file} | jq -cr '.ports[]?'); do
+                result+=" -p ${port}:${port}"
+            done
+            local volume_mounts=$(cat ${values_file} | jq -cr '.mounts?.volumes[]?')
+            local v
+            for v in ${volume_mounts}; do
+                local source=$(echo ${v} | jq -rc '.source')
+                local target=$(echo ${v} | jq -rc '.target')
+                result+=" --mount type=volume,source=${source},target=${target}"
+            done
+            ;;
+        push)
+            ;;
+        \?)
+            echo "Invalid command in extra_docker_flags: ${command}"
+            exit 1
+            ;;
+    esac
+
+    echo ${result}
+}
+
+function load_package_versions () {
+    if [[ ${#} -ne 1 ]]; then
+        echo "load_package_versions values_file. Got: ${@}"
+        exit 1
+    fi
+    local values_file=${1}; shift
+    local k
+    local v
+    # TBD: rewrite this. There must be a better way than reparsing the file for each key.
+    for k in $(cat ${values_file} | jq -r '.versions? | keys? | .[]?'); do
+        v=$(cat ${values_file} | jq -r ".versions.${k}")
+        # convert to uppercase and set the variable
+        declare -g ${k^^}_VERSION=${v}
+    done
+}
+
+################################################################################
+
+valid_commands=(create run push)
+valid_components=(gcc rippled_dev_base base rippled-dev user-dev rippled-deploy rippled-dogfood)
+
+
+function usage(){
+    echo "Usage: ${BASH_SOURCE[0]} [options] <command> <component or package> [<subcommand>]"
+    echo "Valid commands are: ${valid_commands[@]}"
+    echo "Valid components are: ${valid_components[@]}"
+    echo "Valid packages are: ${!package_path[@]}"
+    echo " Note: packages can be specified by priority, in which case all packages at that priority are used."
+    echo '       i.e `push 1 latest` will run the push <component> latest for all components at priority 1.'
+    echo "Valid options are: "
+    echo " -f config_file : json file of container options"
+    echo "Valid push subcommands are: "
+    echo " latest : tag current version as latest when pushing"
+}
+
+# check if an array contain a value
+# first parameter is element to match
+# second parameter is array
+function array_contains(){
+    local e match="$1"
+    shift
+    for e; do [[ "$e" == "$match" ]] && return 0; done
+    return 1
+}
+
+################################################################################
+# main
+
+while getopts ":f:" opt; do
+    case $opt in
+        f)
+            if ! type jq &>/dev/null; then
+                echo "The jq program is required to parse json files. Use 'sudo apt install jq' to install it."
+                exit 1
+            fi
+            options_file=${OPTARG}
+            load_package_versions ${options_file}
+            shift;shift
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+    esac
+done
+
+if [[ $# -lt 2 ]]; then
+    echo "Error: Too few arguments: $#. Requires at least command and component."
+    usage
+    exit 1
+fi
+
+command=${1}; shift;
+component=${1}; shift;
+
+if ! array_contains ${command} "${valid_commands[@]}"; then
+    echo "Invalid command: ${command}"
+    usage
+    exit 1
+fi
+
+populate_package_arrays ${packages_dir}
+
+if ! (array_contains ${component} "${valid_components[@]}" || is_valid_package ${component} || is_valid_package_priority ${component}) ; then
+    echo "Invalid component: ${component}"
+    usage
+    exit 1
+fi
+
+function create_command() {
+    if [[ $# -lt 1 ]]; then
+        echo "Invalid subcommand to create command: $@"
+        exit 1
+    fi
+
+    # Emacs requires that randomize_va_space is disabled when built (due to process dump)
+    if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
+        true ${saved_randomize_va_space:=$(cat /proc/sys/kernel/randomize_va_space)}
+        if [[ saved_randomize_va_space != 0 ]]; then
+            sudo bash -c "echo 0 > /proc/sys/kernel/randomize_va_space"
+        fi
+    fi
+
+    function finish {
+        if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
+            if [[ saved_randomize_va_space != 0 ]]; then
+                sudo bash -c "echo ${saved_randomize_va_space} > /proc/sys/kernel/randomize_va_space"
+            fi
+        fi
+    }
+    # restore randomize_va_space no matter how the scripts exits
+    trap finish EXIT
+
+    local component=${1}; shift
+    if is_valid_package ${component}; then
+        source_package_hooks ${component}
+        create_${component} ${@}
+    elif is_valid_package_priority ${component}; then
+        if [[ $# -ne 0 ]]; then
+            echo "Invalid subcommand to create command: $@"
+            exit 1
+        fi
+        source_package_hooks_for_priority ${component}
+        local p
+        for p in ${packages_at_priority[${component}]}; do
+            create_$p
+        done
+    else
+        case ${component} in
+            user-dev)
+                create_user_dev
+                ;;
+            \?)
+                echo "Invalid component: ${component}"
+                usage
+                exit 1
+                ;;
+        esac
+    fi
+}
+
+function push_command() {
+    # Thie may be called as push_command <component> [subcomponent] [latest]
+    if [[ ${#} -lt 1 ]]; then
+        echo "Error: Must specify component in push command."
+        exit 1
+    elif [[ $# -gt 3 ]]; then
+        echo "Too many parameters in push command: $@"
+        exit 1
+    elif [[ $# -eq 3 && ${@: -1} != "latest" ]]; then
+        echo "Invalid subcommand to push command: $@"
+        exit 1
+    fi
+
+    local component=${1}; shift
+    if is_valid_package ${component}; then
+        source_package_hooks ${component}
+        # check if last param is "latest"
+        if [[ ${@: -1} = "latest" ]]; then
+            docker tag $(${component}_image_name) $(${component}_image_name ${@})
+        fi
+        docker push $(${component}_image_name ${@})
+    elif is_valid_package_priority ${component}; then
+        source_package_hooks_for_priority ${component}
+        local p
+        for p in ${packages_at_priority[${component}]}; do
+            # check if last param is "latest"
+            if [[ ${@: -1} = "latest" ]]; then
+                docker tag $(${p}_image_name) $(${p}_image_name ${@})
+            fi
+            docker push $(${p}_image_name ${@})
+        done
+    else
+        echo "Invalid component: ${component}"
+        usage
+        exit 1
+    fi
+}
+
+run_command() {
+    if [[ $# -lt 1 ]]; then
+        echo "Must specify component to run: ${@}."
+        exit 1
+    fi
+
+    local component=${1}; shift
+    if is_valid_package ${component}; then
+        source_package_hooks ${component}
+        run_${component} ${@}
+    elif is_valid_package_priority ${component}; then
+        echo "Error: the run command does not support running all packages at a given priority"
+        exit 1
+    else
+        case ${component} in
+            user-dev)
+                run_user_dev
+                exit 0
+                ;;
+            \?)
+                echo "Invalid component: ${component}"
+                usage
+                exit 1
+                ;;
+        esac
+    fi
+}
+
+case ${command} in
+    create)
+        create_command ${component} ${@}
+        exit 0
+        ;;
+    run)
+        run_command ${component} ${@}
+        exit 0
+        ;;
+    push)
+        push_command ${component} ${@}
+        exit 0
+        ;;
+    \?)
+        echo "Invalid command: ${command}"
+        usage
+        exit 1
+        ;;
+esac

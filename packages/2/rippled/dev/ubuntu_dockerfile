@@ -1,0 +1,69 @@
+ARG CLANG_PACKAGE
+ARG EMACS_PACKAGE
+ARG GDB_PACKAGE
+ARG BASE_LAYER
+ARG GITHUB_REPO
+ARG GIT_BRANCH
+
+################################################################################
+ARG CLANG_PACKAGE
+
+FROM ${CLANG_PACKAGE} as clang
+
+################################################################################
+ARG EMACS_PACKAGE
+
+FROM ${EMACS_PACKAGE} as emacs
+
+################################################################################
+ARG GDB_PACKAGE
+
+FROM ${GDB_PACKAGE} as gdb
+
+################################################################################
+ARG BASE_LAYER
+
+FROM ${BASE_LAYER}
+
+################################################################################
+# populate the volumes
+# /opt/rippled_bld is where the git project will be checked out. This will be its own volume
+# /opt/rippled is for the database files and conf file. This will also be its own
+#              volume (separate from the bld volume).
+
+ARG GITHUB_REPO
+ARG GIT_BRANCH
+
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y \
+    git
+
+RUN mkdir -p /opt/rippled_bld && \
+    mkdir -p /opt/rippled && \
+    cd /opt/rippled_bld && \
+    git clone --recursive https://github.com/${GITHUB_REPO}/rippled.git && \
+    cd rippled && \
+    git checkout ${GIT_BRANCH}
+COPY ./server/rippled.cfg /opt/rippled/.
+VOLUME /opt/rippled_bld
+VOLUME /opt/rippled
+
+################################################################################
+
+RUN mkdir -p /opt/docker_builds
+COPY --from=clang /opt/docker_builds/clang /opt/docker_builds/clang
+RUN cd /opt/docker_builds/clang && ./clang.sh install && cd / && rm -fr /opt/docker_builds/clang
+
+################################################################################
+
+RUN mkdir -p /opt/docker_builds
+COPY --from=emacs /opt/docker_builds/emacs /opt/docker_builds/emacs
+RUN cd /opt/docker_builds/emacs && ./emacs.sh install && cd / && rm -fr /opt/docker_builds/emacs
+
+################################################################################
+
+RUN mkdir -p /opt/docker_builds
+COPY --from=gdb /opt/docker_builds/gdb /opt/docker_builds/gdb
+RUN cd /opt/docker_builds/gdb && ./gdb.sh install && cd / && rm -fr /opt/docker_builds/gdb
+

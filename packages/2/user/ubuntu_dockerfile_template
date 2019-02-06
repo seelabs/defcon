@@ -1,0 +1,23 @@
+<%defcon_packages_preamble%>
+
+
+################################################################################
+FROM <%base_layer%>
+
+################################################################################
+
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get -y install \
+    sudo \
+    <%apt_packages%> \
+    ;
+
+<%data%>
+
+<%volumes%>
+
+<%defcon_packages_postscript%>
+
+<%with_user_home%>
+

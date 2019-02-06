@@ -1,0 +1,15 @@
+################################################################################
+ARG UBUNTU_VERSION
+ARG GCC_VERSION
+FROM seelabs/gcc:${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}
+
+################################################################################
+
+ARG GDB_VERSION
+
+RUN mkdir -p /opt/docker_builds/gdb
+WORKDIR /opt/docker_builds/gdb
+COPY ./packages/1/gdb/ubuntu_gdb.sh gdb.sh
+RUN /bin/bash gdb.sh ${GDB_VERSION}
+
+################################################################################

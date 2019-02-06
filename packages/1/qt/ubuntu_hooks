@@ -1,0 +1,25 @@
+true ${QT_VERSION:=5.9.7}
+
+function qt_image_name(){
+    if [[ ${#} -gt 1 ]]; then
+        echo "Error: invalid parameter in qt_image_name: ${@}"
+    fi
+    if [[ ${1} = "latest" ]]; then
+        echo "seelabs/qt:latest_gcc-latest_ubuntu-latest"
+    elif [[ -n ${1} ]]; then
+        echo "Error: invalid parameter in qt_image_name: ${@}"
+    else
+        echo "seelabs/qt:${QT_VERSION}_gcc-${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}"
+    fi
+}
+
+function create_qt() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+    docker build \
+           --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+           --build-arg GCC_VERSION=${GCC_VERSION} \
+           --build-arg QT_VERSION=${QT_VERSION} \
+           -t $(qt_image_name) \
+           -f ${this_dir}/ubuntu_dockerfile \
+           ${proj_dir}
+}

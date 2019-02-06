@@ -1,0 +1,40 @@
+ARG BASE_LAYER
+ARG CMAKE_PACKAGE
+ARG BOOST_PACKAGE
+
+################################################################################
+ARG BOOST_PACKAGE
+
+FROM ${BOOST_PACKAGE} as boost
+
+################################################################################
+ARG CMAKE_PACKAGE
+
+FROM ${CMAKE_PACKAGE} as cmake
+
+################################################################################
+ARG BASE_LAYER
+
+FROM ${BASE_LAYER}
+
+################################################################################
+
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y \
+        libprotobuf-dev \
+        libssl-dev \
+        ninja-build \
+        protobuf-compiler
+
+################################################################################
+
+RUN mkdir -p /opt/docker_builds
+COPY --from=boost /opt/docker_builds/boost /opt/docker_builds/boost
+RUN cd /opt/docker_builds/boost && ./boost.sh install && cd / && rm -fr /opt/docker_builds/boost
+
+################################################################################
+
+RUN mkdir -p /opt/docker_builds
+COPY --from=cmake /opt/docker_builds/cmake /opt/docker_builds/cmake
+RUN cd /opt/docker_builds/cmake && ./cmake.sh install && cd / && rm -fr /opt/docker_builds/cmake

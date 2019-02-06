@@ -1,0 +1,50 @@
+true ${SIGNER_VERSION:=0.19.032}
+
+function signer_image_name(){
+    if [[ $# -lt 1 ]]; then
+        echo "Error: Must specify subcomponent in signer_image_name"
+        usage
+        exit 1
+    fi
+    local subcomponent=${1}; shift
+    local full_component=signer_${subcomponent}
+    if [[ ${@: -1} = "latest" ]]; then
+        echo "seelabs/${full_component}:latest_boost-latest_cmake-latest_gcc-latest_ubuntu-latest"
+    else
+        echo "seelabs/${full_component}:${SIGNER_VERSION}_boost-${BOOST_VERSION}_cmake-${CMAKE_VERSION}_gcc-${GCC_VERSION}_qt-${QT_VERSION}_ubuntu-${UBUNTU_VERSION}"
+    fi
+}
+function create_signer() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+
+    if [[ $# -lt 1 ]]; then
+        echo "Error: Must specify exactly one subcomponent in create_signer. Found: ${@}"
+        usage
+        exit 1
+    fi
+
+    local subcomponent=${1}; shift
+    case ${subcomponent} in
+        base)
+            if [[ $# -ne 0 ]]; then
+                echo "Error: Too many arguments in create_signer base. Found: ${@}"
+                usage
+                exit 1
+            fi
+
+            docker build \
+                   --build-arg BASE_LAYER=$(gcc_image_name) \
+                   --build-arg BOOST_PACKAGE=$(boost_image_name) \
+                   --build-arg CMAKE_PACKAGE=$(cmake_image_name) \
+                   --build-arg QT_PACKAGE=$(qt_image_name) \
+                   -t $(signer_image_name ${subcomponent}) \
+                   -f ${this_dir}/${subcomponent}/ubuntu_dockerfile \
+                   ${proj_dir}
+            ;;
+        \?)
+            echo "Invalid subcomponent in create_signer: ${subcomponent}"
+            exit 1
+            ;;
+    esac
+}
+

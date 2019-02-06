@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+set -ex
+set -o pipefail
+
+scripts_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+proj_dir=$(realpath "${scripts_dir}/..")
+dockerfiles_dir=$(realpath "${proj_dir}/dockerfiles")
+user_shell=bash
+
+while getopts ":s:" opt; do
+    case ${opt} in
+        s)
+            user_shell=${OPTARG}
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+    esac
+done
+
+case ${user_shell} in
+    "bash")
+        user_shell="/bin/bash"
+        ;;
+    "zsh")
+        user_shell="/usr/bin/zsh"
+        ;;
+esac
+
+################################################################################
+# version for all containers
+CONTAINER_VERSION=0.1
+################################################################################
+# cpp_dev versions
+UBUNTU_VERSION=18.04
+GCC_VERSION=8.2.0
+CMAKE_VERSION=3.13.2
+CLANG_VERSION=7
+GDB_VERSION=8.2
+################################################################################
+# emacs
+EMACS_VERSION=26.1
+################################################################################
+# rippled_dev
+BOOST_VERSION=1.68.0
+################################################################################
+
+################################################################################
+# build cpp_dev
+docker build \
+  --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+  --build-arg GCC_VERSION=${GCC_VERSION} \
+  --build-arg CMAKE_VERSION=${CMAKE_VERSION} \
+  --build-arg CLANG_VERSION=${CLANG_VERSION} \
+  --build-arg GDB_VERSION=${GDB_VERSION} \
+  -t seelabs/cpp_dev:${CONTAINER_VERSION} \
+  -f ${dockerfiles_dir}/cpp_dev/Dockerfile \
+  ${proj_dir}
+
+################################################################################
+# build emacs_cpp_dev
+sudo bash -c "echo 0 > /proc/sys/kernel/randomize_va_space"
+docker build \
+  --build-arg CPP_DEV_VERSION=${CONTAINER_VERSION} \
+  --build-arg EMACS_VERSION=${EMACS_VERSION} \
+  -t seelabs/emacs_cpp_dev:${CONTAINER_VERSION} \
+  -f ${dockerfiles_dir}/emacs_cpp_dev/Dockerfile \
+  ${proj_dir}
+sudo bash -c "echo 2 > /proc/sys/kernel/randomize_va_space"
+
+################################################################################
+# build rippled_dev
+docker build \
+  --build-arg EMACS_CPP_DEV_VERSION=${CONTAINER_VERSION} \
+  --build-arg BOOST_VERSION=${BOOST_VERSION} \
+  -t seelabs/rippled_dev:${CONTAINER_VERSION} \
+  -f ${dockerfiles_dir}/rippled_dev/Dockerfile \
+  ${proj_dir}
+
+################################################################################
+
+################################################################################
+# build user_dev_env
+docker build \
+       --build-arg BASE_LAYER=seelabs/rippled_dev:${CONTAINER_VERSION} \
+       --build-arg USER_ID=$(id -u) \
+       --build-arg GROUP_ID=$(id -g) \
+       --build-arg USER_NAME=$(whoami) \
+       --build-arg USER_SHELL=${user_shell} \
+       -t seelabs/user_dev_env:${CONTAINER_VERSION} \
+       -f ${dockerfiles_dir}/user_dev_env/Dockerfile \
+       ${proj_dir}
+
+################################################################################

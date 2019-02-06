@@ -1,0 +1,66 @@
+{
+  "name": "dev_rippled:1.3",
+  "base_project": "rippled",
+  "versions": {
+    "rippled": "1.3",
+    "clang": "7",
+    "gdb": "8.2"
+  },
+  "packages": {
+    "apt": [
+      "git",
+      "ccache",
+      "fonts-font-awesome",
+      "fonts-ubuntu",
+      "gnupg2",
+      "jq",
+      "libcapnp-dev",
+      "manpages-dev",
+      "ninja-build",
+      "silversearcher-ag",
+      "stow",
+      "sudo",
+      "tmux",
+      "wmctrl",
+      "zsh"
+    ],
+    "defcon": [
+      "clang",
+      "emacs",
+      "gdb"
+    ]
+  },
+  "data": [
+    {
+      "source": {
+        "repository": "https://github.com/ripple/rippled.git",
+        "branch": "develop"
+      },
+      "target": "/opt/rippled_bld"
+    },
+    {
+      "source": "./server/rippled.cfg",
+      "target": "/opt/rippled/."
+    }
+  ],
+  "volumes": [
+    "/opt/rippled_bld",
+    "/opt/rippled"
+  ],
+  "mounts": {
+    "volumes": [
+      {
+        "source": "rippled_opt_bld",
+        "target": "/opt/rippled_bld"
+      },
+      {
+        "source": "rippled_opt",
+        "target": "/opt/rippled"
+      }
+    ]
+  },
+  "with_debugger": true,
+  "ports": [
+    51235
+  ]
+}

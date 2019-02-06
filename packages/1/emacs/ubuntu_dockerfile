@@ -1,0 +1,15 @@
+################################################################################
+ARG UBUNTU_VERSION
+ARG GCC_VERSION
+FROM seelabs/gcc:${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}
+
+################################################################################
+
+ARG EMACS_VERSION
+
+RUN mkdir -p /opt/docker_builds/emacs
+WORKDIR /opt/docker_builds/emacs
+COPY ./packages/1/emacs/ubuntu_emacs.sh emacs.sh
+RUN /bin/bash emacs.sh ${EMACS_VERSION}
+
+################################################################################

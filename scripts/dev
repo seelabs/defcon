@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+set -ex
+set -o pipefail
+
+user_shell=bash
+
+while getopts ":s:" opt; do
+    case ${opt} in
+        s)
+            user_shell=${OPTARG}
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+    esac
+done
+
+case ${user_shell} in
+    "bash")
+        user_shell="/bin/bash"
+        ;;
+    "zsh")
+        user_shell="/usr/bin/zsh"
+        ;;
+esac
+
+docker run -it \
+            -p 51235:51235 \
+            --mount type=bind,source="/home/swd",target=/home/swd \
+            --user=$(id -u):$(id -g) \
+            seelabs/user_dev_env:0.1 \
+            ${user_shell}
+

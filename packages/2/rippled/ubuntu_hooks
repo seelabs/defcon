@@ -1,0 +1,106 @@
+true ${RIPPLED_VERSION:=1.3}
+
+function rippled_image_name(){
+    if [[ $# -lt 1 ]]; then
+        echo "Error: Must specify subcomponent in rippled_image_name"
+        usage
+        exit 1
+    fi
+    local subcomponent=${1}; shift
+    local full_component=rippled_${subcomponent}
+    if [[ ${@: -1} = "latest" ]]; then
+        echo "seelabs/${full_component}:latest_boost-latest_cmake-latest_gcc-latest_ubuntu-latest"
+    else
+        echo "seelabs/${full_component}:${RIPPLED_VERSION}_boost-${BOOST_VERSION}_cmake-${CMAKE_VERSION}_gcc-${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}"
+    fi
+}
+function create_rippled() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+
+    if [[ $# -lt 1 ]]; then
+        echo "Error: Must specify exactly one subcomponent in create_rippled. Found: ${@}"
+        usage
+        exit 1
+    fi
+
+    local subcomponent=${1}; shift
+    case ${subcomponent} in
+        base)
+            if [[ $# -ne 0 ]]; then
+                echo "Error: Too many arguments in create_rippled base. Found: ${@}"
+                usage
+                exit 1
+            fi
+
+            docker build \
+                   --build-arg BASE_LAYER=$(gcc_image_name) \
+                   --build-arg BOOST_PACKAGE=$(boost_image_name) \
+                   --build-arg CMAKE_PACKAGE=$(cmake_image_name) \
+                   -t $(rippled_image_name ${subcomponent}) \
+                   -f ${this_dir}/${subcomponent}/ubuntu_dockerfile \
+                   ${proj_dir}
+            ;;
+        dev)
+            if [[ $# -ne 2 ]]; then
+                echo "Error: Must specify github_repo and github_branch in create_rippled dev"
+                exit 1
+            fi
+            local GITHUB_REPO=${1}; shift
+            local GIT_BRANCH=${1}; shift
+
+            if [[ -z ${GITHUB_REPO} || -z ${GIT_BRANCH} ]]; then
+                echo "Error: Must specify github_repo and github_branch in create_rippled dev"
+               exit 1
+            fi
+
+            docker build \
+                   --build-arg BASE_LAYER=$(rippled_image_name base) \
+                   --build-arg CLANG_PACKAGE=$(clang_image_name) \
+                   --build-arg EMACS_PACKAGE=$(emacs_image_name) \
+                   --build-arg GDB_PACKAGE=$(gdb_image_name) \
+                   --build-arg GITHUB_REPO=${GITHUB_REPO} \
+                   --build-arg GIT_BRANCH=${GIT_BRANCH} \
+                   -t $(rippled_image_name ${subcomponent}) \
+                   -f ${this_dir}/${subcomponent}/ubuntu_dockerfile \
+                   ${proj_dir}
+            ;;
+        \?)
+            echo "Invalid subcomponent in create_rippled: ${subcomponent}"
+            exit 1
+            ;;
+    esac
+}
+
+ function run_rippled(){
+     if [[ $# -lt 1 ]]; then
+         echo "Error: Must specify exactly one subcomponent in run_rippled. Found: ${@}"
+         usage
+         exit 1
+     fi
+
+     local subcomponent=${1}; shift
+     case ${subcomponent} in
+         dev)
+             if [[ $# -ne 2 ]]; then
+                 echo "Error: Must specify github_repo and github_branch in create_rippled dev"
+                 exit 1
+             fi
+             local GITHUB_REPO=${1}; shift
+             local GIT_BRANCH=${1}; shift
+             local name="rippled_dev-${GITHUB_REPO}-${GIT_BRANCH}${RANDOM}"
+             docker run -it \
+                   -p 51235:51235 \
+                   --mount type=volume,source=rippled_opt_bld,target=/opt/rippled_bld \
+                   --mount type=volume,source=rippled_opt,target=/opt/rippled \
+                   --cap-add=SYS_PTRACE `# for gdb` \
+                   --name ${name} \
+                   $(rippled_image_name ${subcomponent}) \
+                   /bin/bash
+             docker container rm ${name}
+             ;;
+         \?)
+             echo "Invalid subcomponent in create_rippled: ${subcomponent}"
+             exit 1
+             ;;
+     esac
+ }

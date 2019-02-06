@@ -1,0 +1,40 @@
+{
+  "name": "user_dev_signer:0.19.032",
+  "versions": {
+    "signer": "0.19.032",
+    "clang": "7",
+    "gdb": "8.2"
+  },
+  "packages": {
+    "apt": [
+      "git",
+      "ccache",
+      "fonts-font-awesome",
+      "fonts-dejavu",
+      "fonts-ubuntu",
+      "gnupg2",
+      "jq",
+      "libcapnp-dev",
+      "libsodium-dev",
+      "manpages-dev",
+      "ninja-build",
+      "silversearcher-ag",
+      "stow",
+      "sudo",
+      "tmux",
+      "wmctrl",
+      "zsh"
+    ],
+    "defcon": [
+      "clang",
+      "emacs",
+      "gdb"
+    ]
+  },
+  "base_project": "signer",
+  "with_user_home": true,
+  "with_gui": true,
+  "with_sound": true,
+  "with_debugger": true,
+  "with_reverse_debugger": true
+}

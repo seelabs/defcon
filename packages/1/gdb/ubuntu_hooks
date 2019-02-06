@@ -1,0 +1,25 @@
+true ${GDB_VERSION:=8.2}
+
+function gdb_image_name() {
+    if [[ ${#} -gt 1 ]]; then
+        echo "Error: invalid parameter in gdb_image_name: ${@}"
+    fi
+    if [[ ${1} = "latest" ]]; then
+        echo "seelabs/gdb:latest_gcc-latest_ubuntu-latest"
+    elif [[ -n ${1} ]]; then
+        echo "Error: invalid parameter in gdb_image_name: ${@}"
+    else
+        echo "seelabs/gdb:${GDB_VERSION}_gcc-${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}"
+    fi
+}
+
+function create_gdb() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+    docker build \
+           --build-arg UBUNTU_VERSION=${UBUNTU_VERSION} \
+           --build-arg GCC_VERSION=${GCC_VERSION} \
+           --build-arg GDB_VERSION=${GDB_VERSION} \
+           -t $(gdb_image_name) \
+           -f ${this_dir}/ubuntu_dockerfile \
+           ${proj_dir}
+}

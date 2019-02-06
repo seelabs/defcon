@@ -1,0 +1,70 @@
+true ${USER_VERSION:=1.0}
+
+function user_image_name(){
+    if [[ $# -gt 0 ]]; then
+        echo "Error: All arguments to user_image_name must come from an options file."
+        usage
+        exit 1
+    fi
+
+    if [[ -z ${options_file} ]]; then
+        echo "Error: must specify an options file in create_user."
+        exit 1
+    fi
+
+    local name=$(cat ${options_file} | jq -r ".name?")
+    if [[ -z ${name} || ${name} = null ]]; then
+        echo "Error: Json file ${options_file} does not specify a name."
+        exit 1
+    fi
+
+    echo ${name}
+}
+
+function create_user() {
+    local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+
+    if [[ $# -gt 0 ]]; then
+        echo "Error: All arguments to create_user must come from an options file."
+        usage
+        exit 1
+    fi
+
+    if [[ -z ${options_file} ]]; then
+        echo "Error: must specify an options file in create_user."
+        exit 1
+    fi
+
+    local tmp_dockerfile=$(mktemp "${this_dir}/dockerfile.XXXXXXXXXXXX")
+    dockerfile_from_template ${this_dir}/ubuntu_dockerfile_template ${options_file} ${tmp_dockerfile}
+
+
+    docker build \
+           $(extra_docker_flags create ${options_file}) \
+           -t $(user_image_name) \
+           -f ${tmp_dockerfile} \
+           ${proj_dir}
+
+    rm ${tmp_dockerfile}
+}
+
+ function run_user(){
+     if [[ $# -gt 0 ]]; then
+         echo "Error: All arguments to run_user must come from an options file."
+         usage
+         exit 1
+     fi
+
+     if [[ -z ${options_file} ]]; then
+         echo "Error: must specify an options file in run_user."
+         exit 1
+     fi
+
+     local name="user_dev_env${RANDOM}"
+     docker run -it \
+            $(extra_docker_flags run ${options_file}) \
+            --name ${name} \
+            $(user_image_name) \
+            ${SHELL}
+     docker container rm ${name}
+ }

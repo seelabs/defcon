@@ -1,0 +1,40 @@
+ARG UBUNTU_VERSION
+ARG POSTGRES_VERSION
+FROM ubuntu:${UBUNTU_VERSION}
+
+################################################################################
+ARG POSTGRES_VERSION
+
+RUN apt-get update && apt-get install -y software-properties-common postgresql-${POSTGRES_VERSION} postgresql-client-${POSTGRES_VERSION} postgresql-contrib
+
+################################################################################
+USER postgres
+
+RUN    /etc/init.d/postgresql start &&\
+    psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
+    createdb -O docker docker
+
+################################################################################
+ARG POSTGRES_VERSION
+
+# Adjust PostgreSQL configuration so that remote connections to the
+# database are possible.
+RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/${POSTGRES_VERSION}/main/pg_hba.conf
+
+################################################################################
+ARG POSTGRES_VERSION
+
+# And add ``listen_addresses`` to ``/etc/postgresql/${POSTGRES_VERSION}/main/postgresql.conf``
+RUN echo "listen_addresses='*'" >> /etc/postgresql/${POSTGRES_VERSION}/main/postgresql.conf
+
+# Expose the PostgreSQL port
+EXPOSE 5432
+
+# Add VOLUMEs to allow backup of config, logs and databases
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+
+################################################################################
+# ARG are only available at build time. Use env var for run time
+ENV DOCKER_POSTGRES_VERSION=${POSTGRES_VERSION}
+
+CMD /usr/lib/postgresql/$DOCKER_POSTGRES_VERSION/bin/postgres -D /var/lib/postgresql/$DOCKER_POSTGRES_VERSION/main -c config_file=/etc/postgresql/$DOCKER_POSTGRES_VERSION/main/postgresql.conf

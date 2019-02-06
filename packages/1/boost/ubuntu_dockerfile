@@ -1,0 +1,15 @@
+################################################################################
+ARG UBUNTU_VERSION
+ARG GCC_VERSION
+FROM seelabs/gcc:${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}
+
+################################################################################
+
+ARG BOOST_VERSION
+
+RUN mkdir -p /opt/docker_builds/boost
+WORKDIR /opt/docker_builds/boost
+COPY ./packages/1/boost/ubuntu_boost.sh boost.sh
+RUN /bin/bash boost.sh ${BOOST_VERSION}
+
+################################################################################

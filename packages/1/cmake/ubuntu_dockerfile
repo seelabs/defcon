@@ -1,0 +1,15 @@
+################################################################################
+ARG UBUNTU_VERSION
+ARG GCC_VERSION
+FROM seelabs/gcc:${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}
+
+################################################################################
+
+ARG CMAKE_VERSION
+
+RUN mkdir -p /opt/docker_builds/cmake
+WORKDIR /opt/docker_builds/cmake
+COPY ./packages/1/cmake/ubuntu_cmake.sh cmake.sh
+RUN /bin/bash cmake.sh ${CMAKE_VERSION}
+
+################################################################################
