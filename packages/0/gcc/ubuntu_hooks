@@ -1,14 +1,8 @@
 true ${GCC_VERSION:=8.2.0}
 
 function gcc_image_name() {
-    if [[ ${#} -gt 1 ]]; then
-        echo "Error: invalid parameter in gcc_image_name: ${@}"
-    fi
-    if [[ ${1} = "latest" ]];
-    then
+    if [[ ${@: -1} = "latest" ]]; then
         echo "seelabs/gcc:latest_ubuntu-latest"
-    elif [[ -n ${1} ]]; then
-        echo "Error: invalid parameter in gcc_image_name: ${@}"
     else
         echo "seelabs/gcc:${GCC_VERSION}_ubuntu-${UBUNTU_VERSION}"
     fi
