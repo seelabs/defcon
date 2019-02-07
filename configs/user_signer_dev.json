@@ -9,15 +9,9 @@
     "apt": [
       "git",
       "ccache",
-      "fonts-font-awesome",
-      "fonts-dejavu",
-      "fonts-ubuntu",
       "gnupg2",
       "jq",
-      "libcapnp-dev",
-      "libsodium-dev",
       "manpages-dev",
-      "ninja-build",
       "silversearcher-ag",
       "stow",
       "sudo",
@@ -31,7 +25,7 @@
       "gdb"
     ]
   },
-  "base_project": "signer",
+  "base_image": "seelabs/signer_base:0.19.032",
   "with_user_home": true,
   "with_gui": true,
   "with_sound": true,

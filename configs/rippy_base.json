@@ -1,0 +1,25 @@
+{
+  "name": "seelabs/rippy_base:0.1",
+  "packages": {
+    "apt": [
+        libssl-dev,
+        ninja-build,
+        libsodium-dev,
+        python3.7,
+        python3.7-dev,
+        python3-distutils
+    ],
+    "defcon": [
+      "cmake"
+    ]
+  },
+  "base_project": "rippy",
+  "with_user_home": true,
+  "with_gui": true,
+  "with_sound": true,
+  "with_debugger": true,
+  "with_reverse_debugger": true,
+  "ports": [
+    51235
+  ]
+}

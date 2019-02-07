@@ -1,0 +1,25 @@
+{
+  "name": "seelabs/signer_base:0.19.032",
+  "versions": {
+    "signer": "0.19.032",
+    "gcc": "8.2.0"
+  },
+  "packages": {
+    "apt": [
+      "fonts-font-awesome",
+      "fonts-dejavu",
+      "fonts-ubuntu",
+      "libprotobuf-dev",
+      "libssl-dev",
+      "ninja-build",
+      "libsodium-dev",
+      "protobuf-compiler"
+    ],
+    "defcon": [
+      "boost",
+      "cmake",
+      "qt"
+    ]
+  },
+  "base_project": "gcc"
+}

@@ -149,12 +149,24 @@ function dockerfile_from_template() {
     local placeholder
     local replacement
     placeholder=base_layer
-    local base_project=$(cat ${values_file} | jq -r ".base_project?")
-    if [[ -z ${base_project} || ${base_project} = null ]]; then
-        echo "Error: Json file ${values_file} does not specify a base project."
+    replacement=$(cat ${values_file} | jq -r ".base_image?")
+    if [[ ${replacement} = null ]]; then
+        replacement="";
+    fi
+    if [[ -z ${replacement} ]]; then
+        local base_project=$(cat ${values_file} | jq -r ".base_project?")
+        if [[ -z ${base_project} || ${base_project} = null ]]; then
+            echo "Error: Json file ${values_file} does not specify a base project."
+            exit 1
+        else
+            replacement=$(${base_project}_image_name base)
+        fi
+    fi
+    if [[ -z ${replacement} ]]; then
+        echo "Error: Json file ${values_file} does not specify a base project or a base image."
         exit 1
     fi
-    replacement=$(${base_project}_image_name base)
+
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=apt_packages
     replacement=$(cat ${values_file} | jq -r ".packages.apt[]?" | paste -s -d ' ')
