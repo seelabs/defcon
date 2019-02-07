@@ -171,6 +171,14 @@ function dockerfile_from_template() {
     placeholder=apt_packages
     replacement=$(cat ${values_file} | jq -r ".packages.apt[]?" | paste -s -d ' ')
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    placeholder=pip3_packages
+    replacement=$(cat ${values_file} | jq -r ".packages.pip3[]?" | paste -s -d ' ')
+    if [[ -n ${replacement} ]]; then
+        replacement="pip3 install ${replacement}"
+    else
+        replacement="true"
+    fi
+    echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=with_user_home
     replacement=""
     if ! is_json_config_key_on ${values_file} with_user_home; then

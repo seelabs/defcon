@@ -11,6 +11,8 @@ RUN apt-get update && \
     apt-get -y install \
     sudo \
     <%apt_packages%> \
+    && \
+    <%pip3_packages%> \
     ;
 
 <%data%>

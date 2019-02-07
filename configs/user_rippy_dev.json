@@ -1,0 +1,42 @@
+{
+  "name": "user_dev_rippy:0.1",
+  "base_image": "seelabs/rippy_base:0.1",
+  "versions": {
+    "clang": "7",
+    "gdb": "8.2"
+  },
+  "packages": {
+    "apt": [
+      "git",
+      "ccache",
+      "fonts-font-awesome",
+      "fonts-ubuntu",
+      "gnupg2",
+      "jq",
+      "manpages-dev",
+      "ninja-build",
+      "silversearcher-ag",
+      "stow",
+      "sudo",
+      "tmux",
+      "wmctrl",
+      "zsh"
+    ],
+    "defcon": [
+      "clang",
+      "emacs",
+      "gdb"
+    ],
+    "pip3": [
+      "ipython"
+     ]
+  },
+  "with_user_home": true,
+  "with_gui": true,
+  "with_sound": true,
+  "with_debugger": true,
+  "with_reverse_debugger": true,
+  "ports": [
+    51235
+  ]
+}
