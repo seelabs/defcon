@@ -26,6 +26,9 @@ called `user`. Advanced users can create their own packages that can be
 customized with json config file. However, most users will use the existing
 `user` package.
 
+Defon requires that the `jq` package to parse json file. On ubuntu run `sudo apt
+install jq` to install it.
+
 ## Defining Containers with json config files
 
 The `defcon` script is used to create and run containers. The easiest way (tho
