@@ -38,7 +38,6 @@ function create_user() {
     local tmp_dockerfile=$(mktemp "${this_dir}/dockerfile.XXXXXXXXXXXX")
     dockerfile_from_template ${this_dir}/ubuntu_dockerfile_template ${options_file} ${tmp_dockerfile}
 
-
     docker build \
            $(extra_docker_flags create ${options_file}) \
            -t $(user_image_name) \
@@ -46,6 +45,7 @@ function create_user() {
            ${proj_dir}
 
     rm ${tmp_dockerfile}
+    cleanup_staging
 }
 
  function run_user(){

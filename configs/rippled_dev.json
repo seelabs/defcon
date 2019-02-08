@@ -39,7 +39,7 @@
       "target": "/opt/rippled_bld"
     },
     {
-      "source": "./server/rippled.cfg",
+      "source": "./../server/rippled.cfg",
       "target": "/opt/rippled/."
     }
   ],

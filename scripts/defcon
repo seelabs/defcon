@@ -99,6 +99,8 @@ function source_package_hooks(){
 
 # Given a template file with placeholders of the form <%name%> and a json values file,
 # remplace the placeholders with the values in the json file and put the output in the out_file.
+# Note: This may create symbolic links in the staging directory (if the json file contains a data stanza).
+#       The `cleanup_staging` function should be called to clean up these links
 function fill_template() {
     if [[ ${#} -ne 3 ]]; then
         echo "Fill template requires a template_file, values_file, and out_file"
@@ -143,6 +145,7 @@ function dockerfile_from_template() {
     local template_file=${1}; shift
     local values_file=${1}; shift
     local out_file=${1}; shift
+    local values_file_dir=$(dirname $(realpath ${values_file}))
     local tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
     local sed_script=${tmpdir}/fill_template.sed
 
@@ -242,8 +245,20 @@ EOF
             local repo=$(echo "${i}" | jq -cr '.source.repository?')
             local branch=$(echo "${i}" | jq -cr '.source.branch?')
             if [[ -z ${repo} && -z ${branch} ]]; then
+                local source_path_on_host
+                if [[ ${source} = ./* ]]; then
+                    # source begins with './'; so file is relative to json config file
+                    source_path_on_host=${values_file_dir}/${source#./}
+                else
+                    source_path_on_host=${source}
+                fi
+                source_path_on_host=$(realpath ${source_path_on_host})
+                local staging_tempfile=$(mktemp "${proj_dir}/staging/temp.XXXXXXXXXXXX")
+                rm ${staging_tempfile}
+                ln -s ${source_path_on_host} ${staging_tempfile}
+                local relative_path="./$(realpath --relative-to=${proj_dir} ${staging_tempfile})"
                 echo "RUN mkdir -p $(dirname ${target})\\" >> ${sed_script}
-                echo "COPY ${source} ${target}\\" >> ${sed_script}
+                echo "COPY ${relative_path} ${target}\\" >> ${sed_script}
             else
                 local repo_dir=$(basename ${repo%.*})
                 cat <<EOF >> ${sed_script}
@@ -269,6 +284,10 @@ EOF
     sed -f ${sed_script} ${template_file} > ${out_file}
 
     rm -fr ${tmpdir}
+}
+
+function cleanup_staging(){
+    rm ${proj_dir}/staging/temp.*
 }
 
 function extra_docker_flags(){
