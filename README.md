@@ -8,6 +8,24 @@ where the editor, compiler, debugger, and shells, will all be run within the
 docker container. Defcon current focuses on using docker for development, though
 it may be extended to support deployment.
 
+The `defcon` script is used to create and run containers. A container is usually created by using one of the config files in
+the configs directory. For example:
+
+```
+scripts/defcon -f configs/user_rippled_dev.json create user
+```
+
+To run a container, use the run command instead of the `create` command: For example:
+
+```
+scripts/defcon -f configs/user_rippled_dev.json run user
+```
+
+Note the `user` parameter in the examples above refers to a predefined package
+called `user`. Advanced users can create their own packages that can be
+customized with json config file. However, most users will use the existing
+`user` package.
+
 ## Defining Containers with json config files
 
 The `defcon` script is used to create and run containers. The easiest way (tho
