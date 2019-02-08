@@ -101,8 +101,9 @@ defcon packages of dependencies built from source. Example:
  
  `data` This is a list of dictionaries that specify data to add to the
  container. The source of the data may be either a github repository and branch,
- or a file in the `defcon` project. The target is the location in the container
- to put the data. Example:
+ or a file in the on the host system. The '.' directory will be the defcon
+ project directory. Absolute paths may also be specified. The target is the
+ location in the container to put the data. Example:
 
  ```
   "data": [
