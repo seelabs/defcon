@@ -8,7 +8,7 @@ function user_image_name(){
     fi
 
     if [[ -z ${options_file} ]]; then
-        echo "Error: must specify an options file in create_user."
+        echo "Error: must specify an options file in ${FUNCNAME[0]}."
         exit 1
     fi
 
@@ -25,13 +25,13 @@ function create_user() {
     local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 
     if [[ $# -gt 0 ]]; then
-        echo "Error: All arguments to create_user must come from an options file."
+        echo "Error: All arguments to ${FUNCNAME[0]} must come from an options file."
         usage
         exit 1
     fi
 
     if [[ -z ${options_file} ]]; then
-        echo "Error: must specify an options file in create_user."
+        echo "Error: must specify an options file in ${FUNCNAME[0]}."
         exit 1
     fi
 
@@ -50,13 +50,13 @@ function create_user() {
 
  function run_user(){
      if [[ $# -gt 0 ]]; then
-         echo "Error: All arguments to run_user must come from an options file."
+         echo "Error: All arguments to ${FUNCNAME[0]} must come from an options file."
          usage
          exit 1
      fi
 
      if [[ -z ${options_file} ]]; then
-         echo "Error: must specify an options file in run_user."
+         echo "Error: must specify an options file in ${FUNCNAME[0]}."
          exit 1
      fi
 

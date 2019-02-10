@@ -47,37 +47,40 @@ function populate_package_arrays_dir_and_priority(){
         echo "Invalid package priority ${priority}"
         exit 1
     fi
-    for p in $(ls ${d}); do
-        if $(is_valid_package_dir ${d}/${p}); then
-            if [[ -n ${package_priority[${p}]} ]]; then
+    local p
+    for p in "${d}"/*; do
+        p=$(basename "${p}")
+        if $(is_valid_package_dir "${d}"/"${p}"); then
+            if [[ -n ${package_priority["${p}"]} ]]; then
                 echo "Error: Duplicate package ${p} detected"
                 exit 1
             fi
-            package_priority[${p}]=${priority}
-            package_path[${p}]=$(realpath ${d}/${p})
+            package_priority["${p}"]=${priority}
+            package_path["${p}"]=$(realpath ${d}/${p})
             packages_at_priority[${priority}]+=" ${p}"
         fi
     done
 }
 
 function populate_package_arrays(){
-    local d=${1}
+    local d="${1}"
     local p
-    for p in $(ls ${d}); do
-        if is_valid_package_priority ${p}; then
-            populate_package_arrays_dir_and_priority ${d}/${p} ${p}
+    for p in "${d}"/*; do
+        p=$(basename "${p}")
+        if is_valid_package_priority "${p}"; then
+            populate_package_arrays_dir_and_priority "${d}"/"${p}" "${p}"
         fi
     done
 }
 
 # for all the packages at a lower or equal priority level, source those packages hooks
 function source_package_hooks_for_priority(){
-    local max_priority=${1}
+    local max_priority="${1}"
     local priority
-    for priority in $(seq ${max_priority} -1 0); do
+    for priority in $(seq "${max_priority}" -1 0); do
         local to_source
-        for to_source in ${packages_at_priority[${priority}]}; do
-            source ${package_path[${to_source}]}/ubuntu_hooks
+        for to_source in ${packages_at_priority["${priority}"]}; do
+            source "${package_path[${to_source}]}"/ubuntu_hooks
         done
     done
 }
@@ -85,12 +88,12 @@ function source_package_hooks_for_priority(){
 # source a packages's hooks files,
 # and for all the packages at a lower or equal priority level, source those packages hooks as well
 function source_package_hooks(){
-    package=${1}
-    if [[ -z ${package_priority[${package}]} ]]; then
+    package="${1}"
+    if [[ -z ${package_priority["${package}"]} ]]; then
         echo "Error: Invalid package in source_package_and_ancestors_hooks: ${package}"
         exit 1
     fi
-    source_package_hooks_for_priority ${package_priority[${package}]}
+    source_package_hooks_for_priority ${package_priority["${package}"]}
 }
 
 ################################################################################
@@ -99,36 +102,36 @@ function source_package_hooks(){
 # Check if the json values file has the specified key set to true
 function is_json_config_key_on() {
     if [[ ${#} -ne 2 ]]; then
-        echo "is_json_config_key_on must specify values_file and key. Got: ${@}"
+        echo "${FUNCNAME[0]} must specify values_file and key. Got: ${*}"
         exit 1
     fi
     local values_file=${1}; shift
     local key=${1}; shift
-    [[ $(jq ".${key}?" ${values_file}) = true ]]
+    [[ $(jq ".${key}?" "${values_file}") = true ]]
 }
 
 function dockerfile_from_template() {
     if [[ ${#} -ne 3 ]]; then
-        echo "dockerfile_from_template must specify template_file, values_file, and out file. Got: ${@}"
+        echo "${FUNCNAME[0]} must specify template_file, values_file, and out file. Got: ${*}"
         exit 1
     fi
 
     local template_file=${1}; shift
     local values_file=${1}; shift
     local out_file=${1}; shift
-    local values_file_dir=$(dirname $(realpath ${values_file}))
+    local values_file_dir=$(dirname $(realpath "${values_file}"))
     local tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
     local sed_script=${tmpdir}/fill_template.sed
 
     local placeholder
     local replacement
     placeholder=base_layer
-    replacement=$(jq -r ".base_image?" ${values_file})
+    replacement=$(jq -r ".base_image?" "${values_file}")
     if [[ ${replacement} = null ]]; then
         replacement="";
     fi
     if [[ -z ${replacement} ]]; then
-        local base_project=$(jq -r ".base_project?" ${values_file})
+        local base_project=$(jq -r ".base_project?" "${values_file}")
         if [[ -z ${base_project} || ${base_project} = null ]]; then
             echo "Error: Json file ${values_file} does not specify a base project."
             exit 1
@@ -143,10 +146,10 @@ function dockerfile_from_template() {
 
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=apt_packages
-    replacement=$(jq -r ".packages.apt[]?" ${values_file} | paste -s -d ' ')
+    replacement=$(jq -r ".packages.apt[]?" "${values_file}" | paste -s -d ' ')
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=pip3_packages
-    replacement=$(jq -r ".packages.pip3[]?" ${values_file} | paste -s -d ' ')
+    replacement=$(jq -r ".packages.pip3[]?" "${values_file}" | paste -s -d ' ')
     if [[ -n ${replacement} ]]; then
         replacement="pip3 install ${replacement}"
     else
@@ -155,7 +158,7 @@ function dockerfile_from_template() {
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=with_user_home
     replacement=""
-    if ! is_json_config_key_on ${values_file} with_user_home; then
+    if ! is_json_config_key_on "${values_file}" with_user_home; then
         echo "s!<%${placeholder}%>!!g" >> ${sed_script}
     else
         local user_id=$(id -u)
@@ -181,7 +184,7 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local defcon_packages=$(jq -r '.packages.defcon[]?' ${values_file})
+    local defcon_packages=$(jq -r '.packages.defcon[]?' "${values_file}")
     if [[ -z ${defcon_packages} ]]; then
         echo "s!<%defcon_packages_preamble%>!!g" >> ${sed_script}
         echo "s!<%defcon_packages_postscript%>!!g" >> ${sed_script}
@@ -204,7 +207,7 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local data=$(jq -cr '.data[]?' ${values_file})
+    local data=$(jq -cr '.data[]?' "${values_file}")
     if [[ -z ${data} ]]; then
         echo "s!<%data%>!!g" >> ${sed_script}
     else
@@ -240,7 +243,7 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local volumes=$(jq -cr '.volumes[]?' ${values_file})
+    local volumes=$(jq -cr '.volumes[]?' "${values_file}")
     if [[ -z ${volumes} ]]; then
         echo "s!<%volumes%>!!g" >> ${sed_script}
     else
@@ -263,7 +266,7 @@ function cleanup_staging(){
 
 function extra_docker_flags(){
     if [[ ${#} -ne 2 ]]; then
-        echo "extra_docker_flags must specify command and values_values files. Got: ${@}"
+        echo "${FUNCNAME[0]} must specify command and values_values files. Got: ${*}"
         exit 1
     fi
 
@@ -275,28 +278,28 @@ function extra_docker_flags(){
         create)
             ;;
         run)
-            if is_json_config_key_on ${values_file} with_user_home; then
+            if is_json_config_key_on "${values_file}" with_user_home; then
                 result+=" --mount type=bind,source=/home/$(whoami),target=/home/$(whoami)"
                 result+=" --user=$(id -u):$(id -g)"
             fi
-            if is_json_config_key_on ${values_file} with_gui; then
+            if is_json_config_key_on "${values_file}" with_gui; then
                 result+=" -v /tmp/.X11-unix:/tmp/.X11-unix"
                 result+=" -e DISPLAY=unix$DISPLAY"
             fi
-            if is_json_config_key_on ${values_file} with_sound; then
+            if is_json_config_key_on "${values_file}" with_sound; then
                 result+=" --device /dev/snd"
             fi
-            if is_json_config_key_on ${values_file} with_debugger; then
+            if is_json_config_key_on "${values_file}" with_debugger; then
                 result+=" --cap-add=SYS_PTRACE"
             fi
-            if is_json_config_key_on ${values_file} with_reverse_debugger; then
+            if is_json_config_key_on "${values_file}" with_reverse_debugger; then
                 result+=" --security-opt seccomp=unconfined"
             fi
             local port
-            for port in $(jq -cr '.ports[]?' ${values_file}); do
+            for port in $(jq -cr '.ports[]?' "${values_file}"); do
                 result+=" -p ${port}:${port}"
             done
-            local volume_mounts=$(jq -cr '.mounts?.volumes[]?' ${values_file})
+            local volume_mounts=$(jq -cr '.mounts?.volumes[]?' "${values_file}")
             local v
             for v in ${volume_mounts}; do
                 local source=$(echo ${v} | jq -rc '.source')
@@ -317,15 +320,15 @@ function extra_docker_flags(){
 
 function load_package_versions () {
     if [[ ${#} -ne 1 ]]; then
-        echo "load_package_versions values_file. Got: ${@}"
+        echo "${FUNCNAME[0]} values_file. Got: ${*}"
         exit 1
     fi
     local values_file=${1}; shift
     local k
     local v
     # TBD: rewrite this. There must be a better way than reparsing the file for each key.
-    for k in $(jq -r '.versions? | keys? | .[]?' ${values_file}); do
-        v=$(jq -r ".versions.${k}" ${values_file})
+    for k in $(jq -r '.versions? | keys? | .[]?' "${values_file}"); do
+        v=$(jq -r ".versions.${k}" "${values_file}")
         # convert to uppercase and set the variable
         declare -g ${k^^}_VERSION=${v}
     done
@@ -429,7 +432,7 @@ function create_command() {
     local component=${1}; shift
     if is_valid_package ${component}; then
         source_package_hooks ${component}
-        create_${component} ${@}
+        create_${component} "${@}"
     elif is_valid_package_priority ${component}; then
         if [[ $# -ne 0 ]]; then
             echo "Invalid subcommand to create command: $@"
@@ -472,18 +475,18 @@ function push_command() {
         source_package_hooks ${component}
         # check if last param is "latest"
         if [[ ${@: -1} = "latest" ]]; then
-            docker tag $(${component}_image_name) $(${component}_image_name ${@})
+            docker tag $(${component}_image_name) $(${component}_image_name "${@}")
         fi
-        docker push $(${component}_image_name ${@})
+        docker push $(${component}_image_name "${@}")
     elif is_valid_package_priority ${component}; then
         source_package_hooks_for_priority ${component}
         local p
         for p in ${packages_at_priority[${component}]}; do
             # check if last param is "latest"
             if [[ ${@: -1} = "latest" ]]; then
-                docker tag $(${p}_image_name) $(${p}_image_name ${@})
+                docker tag $(${p}_image_name) $(${p}_image_name "${@}")
             fi
-            docker push $(${p}_image_name ${@})
+            docker push $(${p}_image_name "${@}")
         done
     else
         echo "Invalid component: ${component}"
@@ -494,14 +497,14 @@ function push_command() {
 
 run_command() {
     if [[ $# -lt 1 ]]; then
-        echo "Must specify component to run: ${@}."
+        echo "Must specify component to run: ${*}."
         exit 1
     fi
 
     local component=${1}; shift
     if is_valid_package ${component}; then
         source_package_hooks ${component}
-        run_${component} ${@}
+        run_${component} "${@}"
     elif is_valid_package_priority ${component}; then
         echo "Error: the run command does not support running all packages at a given priority"
         exit 1
@@ -522,15 +525,15 @@ run_command() {
 
 case ${command} in
     create)
-        create_command ${component} ${@}
+        create_command ${component} "${@}"
         exit 0
         ;;
     run)
-        run_command ${component} ${@}
+        run_command ${component} "${@}"
         exit 0
         ;;
     push)
-        push_command ${component} ${@}
+        push_command ${component} "${@}"
         exit 0
         ;;
     \?)
