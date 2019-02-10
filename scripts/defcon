@@ -11,7 +11,6 @@ UBUNTU_VERSION=18.04
 
 scripts_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 proj_dir=$(realpath "${scripts_dir}/..")
-dockerfiles_dir=$(realpath "${proj_dir}/dockerfiles")
 packages_dir=$(realpath "${scripts_dir}/../packages")
 options_file=""
 
@@ -412,14 +411,14 @@ function create_command() {
     # Emacs requires that randomize_va_space is disabled when built (due to process dump)
     if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
         : ${saved_randomize_va_space:=$(cat /proc/sys/kernel/randomize_va_space)}
-        if [[ saved_randomize_va_space != 0 ]]; then
+        if [[ ${saved_randomize_va_space} != 0 ]]; then
             sudo bash -c "echo 0 > /proc/sys/kernel/randomize_va_space"
         fi
     fi
 
     function finish {
         if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
-            if [[ saved_randomize_va_space != 0 ]]; then
+            if [[ ${saved_randomize_va_space} != 0 ]]; then
                 sudo bash -c "echo ${saved_randomize_va_space} > /proc/sys/kernel/randomize_va_space"
             fi
         fi
