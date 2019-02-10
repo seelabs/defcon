@@ -1,4 +1,4 @@
-true ${USER_VERSION:=1.0}
+: ${USER_VERSION:=1.0}
 
 function user_image_name(){
     if [[ $# -gt 0 ]]; then

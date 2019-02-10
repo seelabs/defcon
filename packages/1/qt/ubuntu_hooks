@@ -1,4 +1,4 @@
-true ${QT_VERSION:=5.9.7}
+: ${QT_VERSION:=5.9.7}
 
 function qt_image_name(){
     if [[ ${#} -gt 1 ]]; then

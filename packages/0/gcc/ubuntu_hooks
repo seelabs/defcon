@@ -1,4 +1,4 @@
-true ${GCC_VERSION:=8.2.0}
+: ${GCC_VERSION:=8.2.0}
 
 function gcc_image_name() {
     if [[ ${@: -1} = "latest" ]]; then

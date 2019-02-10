@@ -395,7 +395,7 @@ function array_contains(){
 while getopts ":f:" opt; do
     case $opt in
         f)
-            if ! type jq &>/dev/null; then
+            if ! hash jq &>/dev/null; then
                 echo "The jq program is required to parse json files. Use 'sudo apt install jq' to install it."
                 exit 1
             fi
@@ -439,7 +439,7 @@ function create_command() {
 
     # Emacs requires that randomize_va_space is disabled when built (due to process dump)
     if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
-        true ${saved_randomize_va_space:=$(cat /proc/sys/kernel/randomize_va_space)}
+        : ${saved_randomize_va_space:=$(cat /proc/sys/kernel/randomize_va_space)}
         if [[ saved_randomize_va_space != 0 ]]; then
             sudo bash -c "echo 0 > /proc/sys/kernel/randomize_va_space"
         fi

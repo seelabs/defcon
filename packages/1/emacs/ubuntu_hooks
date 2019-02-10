@@ -1,4 +1,4 @@
-true ${EMACS_VERSION:=26.1}
+: ${EMACS_VERSION:=26.1}
 
 function emacs_image_name() {
     if [[ ${#} -gt 1 ]]; then

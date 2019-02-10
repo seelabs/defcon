@@ -1,4 +1,4 @@
-true ${POSTGRES_VERSION:=10}
+: ${POSTGRES_VERSION:=10}
 
 function postgres_image_name() {
     if [[ ${#} -gt 1 ]]; then

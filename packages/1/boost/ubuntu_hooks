@@ -1,4 +1,4 @@
-true ${BOOST_VERSION:=1.68.0}
+: ${BOOST_VERSION:=1.68.0}
 
 function boost_image_name(){
     if [[ ${#} -gt 1 ]]; then
