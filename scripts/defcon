@@ -119,8 +119,10 @@ function dockerfile_from_template() {
     local template_file=${1}; shift
     local values_file=${1}; shift
     local out_file=${1}; shift
-    local values_file_dir=$(dirname $(realpath "${values_file}"))
-    local tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
+    local values_file_dir
+    values_file_dir=$(dirname $(realpath "${values_file}"))
+    local tmpdir
+    tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
     local sed_script=${tmpdir}/fill_template.sed
 
     local placeholder
@@ -131,7 +133,8 @@ function dockerfile_from_template() {
         replacement="";
     fi
     if [[ -z ${replacement} ]]; then
-        local base_project=$(jq -r ".base_project?" "${values_file}")
+        local base_project
+        base_project=$(jq -r ".base_project?" "${values_file}")
         if [[ -z ${base_project} || ${base_project} = null ]]; then
             echo "Error: Json file ${values_file} does not specify a base project."
             exit 1
@@ -161,9 +164,12 @@ function dockerfile_from_template() {
     if ! is_json_config_key_on "${values_file}" with_user_home; then
         echo "s!<%${placeholder}%>!!g" >> ${sed_script}
     else
-        local user_id=$(id -u)
-        local group_id=$(id -g)
-        local user_name=$(whoami)
+        local user_id
+        user_id=$(id -u)
+        local group_id
+        group_id=$(id -g)
+        local user_name
+        user_name=$(whoami)
         local user_shell=${SHELL}
 
         cat <<EOF > ${proj_dir}/sudoers.txt
@@ -184,7 +190,8 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local defcon_packages=$(jq -r '.packages.defcon[]?' "${values_file}")
+    local defcon_packages
+    defcon_packages=$(jq -r '.packages.defcon[]?' "${values_file}")
     if [[ -z ${defcon_packages} ]]; then
         echo "s!<%defcon_packages_preamble%>!!g" >> ${sed_script}
         echo "s!<%defcon_packages_postscript%>!!g" >> ${sed_script}
@@ -207,17 +214,22 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local data=$(jq -cr '.data[]?' "${values_file}")
+    local data
+    data=$(jq -cr '.data[]?' "${values_file}")
     if [[ -z ${data} ]]; then
         echo "s!<%data%>!!g" >> ${sed_script}
     else
         echo "s!<%data%>!\\" >> ${sed_script}
         local i
         for i in ${data}; do
-            local target=$(echo "${i}" | jq -cr '.target')
-            local source=$(echo "${i}" | jq -cr '.source')
-            local repo=$(echo "${i}" | jq -cr '.source.repository?')
-            local branch=$(echo "${i}" | jq -cr '.source.branch?')
+            local target
+            target=$(echo "${i}" | jq -cr '.target')
+            local source
+            source=$(echo "${i}" | jq -cr '.source')
+            local repo
+            repo=$(echo "${i}" | jq -cr '.source.repository?')
+            local branch
+            branch=$(echo "${i}" | jq -cr '.source.branch?')
             if [[ -z ${repo} && -z ${branch} ]]; then
                 local source_path_on_host
                 if [[ ${source} = ./* ]]; then
@@ -227,14 +239,17 @@ EOF
                     source_path_on_host=${source}
                 fi
                 source_path_on_host=$(realpath ${source_path_on_host})
-                local staging_tempfile=$(mktemp "${proj_dir}/staging/temp.XXXXXXXXXXXX")
+                local staging_tempfile
+                staging_tempfile=$(mktemp "${proj_dir}/staging/temp.XXXXXXXXXXXX")
                 rm ${staging_tempfile}
                 ln -s ${source_path_on_host} ${staging_tempfile}
-                local relative_path="./$(realpath --relative-to=${proj_dir} ${staging_tempfile})"
+                local relative_path
+                relative_path="./$(realpath --relative-to=${proj_dir} ${staging_tempfile})"
                 echo "RUN mkdir -p $(dirname ${target})\\" >> ${sed_script}
                 echo "COPY ${relative_path} ${target}\\" >> ${sed_script}
             else
-                local repo_dir=$(basename ${repo%.*})
+                local repo_dir
+                repo_dir=$(basename ${repo%.*})
                 cat <<EOF >> ${sed_script}
 RUN mkdir -p ${target} \&\& cd ${target} \&\& git clone --recursive ${repo} \&\& cd ${repo_dir} \&\& git checkout ${branch} \\
 EOF
@@ -243,7 +258,8 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local volumes=$(jq -cr '.volumes[]?' "${values_file}")
+    local volumes
+    volumes=$(jq -cr '.volumes[]?' "${values_file}")
     if [[ -z ${volumes} ]]; then
         echo "s!<%volumes%>!!g" >> ${sed_script}
     else
@@ -299,11 +315,14 @@ function extra_docker_flags(){
             for port in $(jq -cr '.ports[]?' "${values_file}"); do
                 result+=" -p ${port}:${port}"
             done
-            local volume_mounts=$(jq -cr '.mounts?.volumes[]?' "${values_file}")
+            local volume_mounts
+            volume_mounts=$(jq -cr '.mounts?.volumes[]?' "${values_file}")
             local v
             for v in ${volume_mounts}; do
-                local source=$(echo ${v} | jq -rc '.source')
-                local target=$(echo ${v} | jq -rc '.target')
+                local source
+                source=$(echo ${v} | jq -rc '.source')
+                local target
+                target=$(echo ${v} | jq -rc '.target')
                 result+=" --mount type=volume,source=${source},target=${target}"
             done
             ;;
