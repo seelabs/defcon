@@ -56,7 +56,7 @@ function populate_package_arrays_dir_and_priority(){
                 exit 1
             fi
             package_priority["${p}"]=${priority}
-            package_path["${p}"]=$(realpath ${d}/${p})
+            package_path["${p}"]=$(realpath "${d}"/"${p}")
             packages_at_priority[${priority}]+=" ${p}"
         fi
     done
@@ -147,10 +147,10 @@ function dockerfile_from_template() {
         exit 1
     fi
 
-    echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    echo "s!<%${placeholder}%>!${replacement}!g" >> "${sed_script}"
     placeholder=apt_packages
     replacement=$(jq -r ".packages.apt[]?" "${values_file}" | paste -s -d ' ')
-    echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    echo "s!<%${placeholder}%>!${replacement}!g" >> "${sed_script}"
     placeholder=pip3_packages
     replacement=$(jq -r ".packages.pip3[]?" "${values_file}" | paste -s -d ' ')
     if [[ -n ${replacement} ]]; then
@@ -158,11 +158,11 @@ function dockerfile_from_template() {
     else
         replacement="true"
     fi
-    echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
+    echo "s!<%${placeholder}%>!${replacement}!g" >> "${sed_script}"
     placeholder=with_user_home
     replacement=""
     if ! is_json_config_key_on "${values_file}" with_user_home; then
-        echo "s!<%${placeholder}%>!!g" >> ${sed_script}
+        echo "s!<%${placeholder}%>!!g" >> "${sed_script}"
     else
         local user_id
         user_id=$(id -u)
@@ -179,47 +179,47 @@ Defaults    env_reset
 Defaults    secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 EOF
 
-        echo "s!<%${placeholder}%>!\\" >> ${sed_script}
-        cat <<EOF >> ${sed_script}
+        echo "s!<%${placeholder}%>!\\" >> "${sed_script}"
+        cat <<EOF >> "${sed_script}"
 ADD /sudoers.txt /etc/sudoers\\
 RUN chmod 440 /etc/sudoers\\
 RUN useradd -l -d /home/${user_name} -s ${user_shell} -u ${user_id} -G sudo ${user_name}\\
 USER ${user_name}\\
 WORKDIR /home/${user_name}\\
 EOF
-        echo "!g" >> ${sed_script}
+        echo "!g" >> "${sed_script}"
     fi
 
     local defcon_packages
     defcon_packages=$(jq -r '.packages.defcon[]?' "${values_file}")
     if [[ -z ${defcon_packages} ]]; then
-        echo "s!<%defcon_packages_preamble%>!!g" >> ${sed_script}
-        echo "s!<%defcon_packages_postscript%>!!g" >> ${sed_script}
+        echo "s!<%defcon_packages_preamble%>!!g" >> "${sed_script}"
+        echo "s!<%defcon_packages_postscript%>!!g" >> "${sed_script}"
     else
         local p
-        echo "s!<%defcon_packages_preamble%>!\\" >> ${sed_script}
+        echo "s!<%defcon_packages_preamble%>!\\" >> "${sed_script}"
         for p in ${defcon_packages}; do
-            echo "from $(${p}_image_name) as ${p}\\" >> ${sed_script}
+            echo "from $(${p}_image_name) as ${p}\\" >> "${sed_script}"
         done
-        echo "!g" >> ${sed_script}
-        echo "s!<%defcon_packages_postscript%>!\\" >> ${sed_script}
+        echo "!g" >> "${sed_script}"
+        echo "s!<%defcon_packages_postscript%>!\\" >> "${sed_script}"
         # use \& to escape & in the sed pattern. '&' by itself is the matched regex
         for p in ${defcon_packages}; do
-            cat <<EOF >> ${sed_script}
+            cat <<EOF >> "${sed_script}"
 RUN mkdir -p /opt/docker_builds\\
 COPY --from=${p} /opt/docker_builds/${p} /opt/docker_builds/${p}\\
 RUN cd /opt/docker_builds/${p} \&\& ./${p}.sh install \&\& cd / \&\& rm -fr /opt/docker_builds/${p}\\
 EOF
         done
-        echo "!g" >> ${sed_script}
+        echo "!g" >> "${sed_script}"
     fi
 
     local data
     data=$(jq -cr '.data[]?' "${values_file}")
     if [[ -z ${data} ]]; then
-        echo "s!<%data%>!!g" >> ${sed_script}
+        echo "s!<%data%>!!g" >> "${sed_script}"
     else
-        echo "s!<%data%>!\\" >> ${sed_script}
+        echo "s!<%data%>!\\" >> "${sed_script}"
         local i
         for i in ${data}; do
             local target
@@ -245,33 +245,33 @@ EOF
                 ln -s ${source_path_on_host} ${staging_tempfile}
                 local relative_path
                 relative_path="./$(realpath --relative-to=${proj_dir} ${staging_tempfile})"
-                echo "RUN mkdir -p $(dirname ${target})\\" >> ${sed_script}
-                echo "COPY ${relative_path} ${target}\\" >> ${sed_script}
+                echo "RUN mkdir -p $(dirname ${target})\\" >> "${sed_script}"
+                echo "COPY ${relative_path} ${target}\\" >> "${sed_script}"
             else
                 local repo_dir
                 repo_dir=$(basename ${repo%.*})
-                cat <<EOF >> ${sed_script}
+                cat <<EOF >> "${sed_script}"
 RUN mkdir -p ${target} \&\& cd ${target} \&\& git clone --recursive ${repo} \&\& cd ${repo_dir} \&\& git checkout ${branch} \\
 EOF
             fi
         done
-        echo "!g" >> ${sed_script}
+        echo "!g" >> "${sed_script}"
     fi
 
     local volumes
     volumes=$(jq -cr '.volumes[]?' "${values_file}")
     if [[ -z ${volumes} ]]; then
-        echo "s!<%volumes%>!!g" >> ${sed_script}
+        echo "s!<%volumes%>!!g" >> "${sed_script}"
     else
-        echo "s!<%volumes%>!\\" >> ${sed_script}
+        echo "s!<%volumes%>!\\" >> "${sed_script}"
         local v
         for v in ${volumes}; do
-            echo "VOLUME ${v}\\" >> ${sed_script}
+            echo "VOLUME ${v}\\" >> "${sed_script}"
         done
-        echo "!g" >> ${sed_script}
+        echo "!g" >> "${sed_script}"
     fi
 
-    sed -f ${sed_script} ${template_file} > ${out_file}
+    sed -f "${sed_script}" "${template_file}" > "${out_file}"
 
     rm -fr ${tmpdir}
 }
