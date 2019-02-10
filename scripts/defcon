@@ -359,9 +359,9 @@ valid_components=(gcc rippled_dev_base base rippled-dev user-dev rippled-deploy 
 
 function usage(){
     echo "Usage: ${BASH_SOURCE[0]} [options] <command> <component or package> [<subcommand>]"
-    echo "Valid commands are: ${valid_commands[@]}"
-    echo "Valid components are: ${valid_components[@]}"
-    echo "Valid packages are: ${!package_path[@]}"
+    echo "Valid commands are: ${valid_commands[*]}"
+    echo "Valid components are: ${valid_components[*]}"
+    echo "Valid packages are: ${!package_path[*]}"
     echo " Note: packages can be specified by priority, in which case all packages at that priority are used."
     echo '       i.e `push 1 latest` will run the push <component> latest for all components at priority 1.'
     echo "Valid options are: "
@@ -390,8 +390,8 @@ while getopts ":f:" opt; do
                 echo "The jq program is required to parse json files. Use 'sudo apt install jq' to install it."
                 exit 1
             fi
-            options_file=${OPTARG}
-            load_package_versions ${options_file}
+            options_file="${OPTARG}"
+            load_package_versions "${options_file}"
             shift;shift
             ;;
         \?)
@@ -408,15 +408,15 @@ fi
 command=${1}; shift;
 component=${1}; shift;
 
-if ! array_contains ${command} "${valid_commands[@]}"; then
+if ! array_contains "${command}" "${valid_commands[@]}"; then
     echo "Invalid command: ${command}"
     usage
     exit 1
 fi
 
-populate_package_arrays ${packages_dir}
+populate_package_arrays "${packages_dir}"
 
-if ! (array_contains ${component} "${valid_components[@]}" || is_valid_package ${component} || is_valid_package_priority ${component}) ; then
+if ! (array_contains "${component}" "${valid_components[@]}" || is_valid_package ${component} || is_valid_package_priority ${component}) ; then
     echo "Invalid component: ${component}"
     usage
     exit 1
@@ -424,7 +424,7 @@ fi
 
 function create_command() {
     if [[ $# -lt 1 ]]; then
-        echo "Invalid subcommand to create command: $@"
+        echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}"
         exit 1
     fi
 
@@ -452,7 +452,7 @@ function create_command() {
         create_${component} "${@}"
     elif is_valid_package_priority ${component}; then
         if [[ $# -ne 0 ]]; then
-            echo "Invalid subcommand to create command: $@"
+            echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}"
             exit 1
         fi
         source_package_hooks_for_priority ${component}
@@ -477,13 +477,13 @@ function create_command() {
 function push_command() {
     # Thie may be called as push_command <component> [subcomponent] [latest]
     if [[ ${#} -lt 1 ]]; then
-        echo "Error: Must specify component in push command."
+        echo "Error: Must specify component in ${FUNCNAME[0]}."
         exit 1
     elif [[ $# -gt 3 ]]; then
-        echo "Too many parameters in push command: $@"
+        echo "Too many parameters in ${FUNCNAME[0]}: ${*}"
         exit 1
     elif [[ $# -eq 3 && ${@: -1} != "latest" ]]; then
-        echo "Invalid subcommand to push command: $@"
+        echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}"
         exit 1
     fi
 
