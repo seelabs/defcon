@@ -97,34 +97,6 @@ function source_package_hooks(){
 ################################################################################
 # Functions to substitute json parameters into template files
 
-# Given a template file with placeholders of the form <%name%> and a json values file,
-# remplace the placeholders with the values in the json file and put the output in the out_file.
-# Note: This may create symbolic links in the staging directory (if the json file contains a data stanza).
-#       The `cleanup_staging` function should be called to clean up these links
-function fill_template() {
-    if [[ ${#} -ne 3 ]]; then
-        echo "Fill template requires a template_file, values_file, and out_file"
-        exit 1
-    fi
-    local template_file=${1}; shift
-    local values_file=${1}; shift
-    local out_file=${1}; shift
-
-    local tmpdir=$(mktemp -d "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
-    local sed_script=${tmpdir}/fill_template.sed
-
-    local placeholder
-    local replacement=""
-    for placeholder in $(grep -oE '<%.*%>' ${template_file} | grep -oE '[a-zA-Z0-9_]+'); do
-        replacement=$(cat rippled_user_dev.json| jq -r ".${placeholder}[]?")
-        echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
-    done
-
-    sed -f ${sed_script} ${template_file} > ${out_file}
-
-    rm -fr tmpdir
-}
-
 # Check if the json values file has the specified key set to true
 function is_json_config_key_on() {
     if [[ ${#} -ne 2 ]]; then
