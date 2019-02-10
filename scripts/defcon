@@ -166,8 +166,6 @@ function dockerfile_from_template() {
     else
         local user_id
         user_id=$(id -u)
-        local group_id
-        group_id=$(id -g)
         local user_name
         user_name=$(whoami)
         local user_shell=${SHELL}
