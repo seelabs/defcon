@@ -105,7 +105,7 @@ function is_json_config_key_on() {
     fi
     local values_file=${1}; shift
     local key=${1}; shift
-    [[ $(cat ${values_file} | jq ".${key}?") = true ]]
+    [[ $(jq ".${key}?" ${values_file}) = true ]]
 }
 
 function dockerfile_from_template() {
@@ -124,12 +124,12 @@ function dockerfile_from_template() {
     local placeholder
     local replacement
     placeholder=base_layer
-    replacement=$(cat ${values_file} | jq -r ".base_image?")
+    replacement=$(jq -r ".base_image?" ${values_file})
     if [[ ${replacement} = null ]]; then
         replacement="";
     fi
     if [[ -z ${replacement} ]]; then
-        local base_project=$(cat ${values_file} | jq -r ".base_project?")
+        local base_project=$(jq -r ".base_project?" ${values_file})
         if [[ -z ${base_project} || ${base_project} = null ]]; then
             echo "Error: Json file ${values_file} does not specify a base project."
             exit 1
@@ -144,10 +144,10 @@ function dockerfile_from_template() {
 
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=apt_packages
-    replacement=$(cat ${values_file} | jq -r ".packages.apt[]?" | paste -s -d ' ')
+    replacement=$(jq -r ".packages.apt[]?" ${values_file} | paste -s -d ' ')
     echo "s!<%${placeholder}%>!${replacement}!g" >> ${sed_script}
     placeholder=pip3_packages
-    replacement=$(cat ${values_file} | jq -r ".packages.pip3[]?" | paste -s -d ' ')
+    replacement=$(jq -r ".packages.pip3[]?" ${values_file} | paste -s -d ' ')
     if [[ -n ${replacement} ]]; then
         replacement="pip3 install ${replacement}"
     else
@@ -182,7 +182,7 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local defcon_packages=$(cat ${values_file} | jq -r '.packages.defcon[]?')
+    local defcon_packages=$(jq -r '.packages.defcon[]?' ${values_file})
     if [[ -z ${defcon_packages} ]]; then
         echo "s!<%defcon_packages_preamble%>!!g" >> ${sed_script}
         echo "s!<%defcon_packages_postscript%>!!g" >> ${sed_script}
@@ -205,7 +205,7 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local data=$(cat ${values_file} | jq -cr '.data[]?')
+    local data=$(jq -cr '.data[]?' ${values_file})
     if [[ -z ${data} ]]; then
         echo "s!<%data%>!!g" >> ${sed_script}
     else
@@ -241,7 +241,7 @@ EOF
         echo "!g" >> ${sed_script}
     fi
 
-    local volumes=$(cat ${values_file} | jq -cr '.volumes[]?')
+    local volumes=$(jq -cr '.volumes[]?' ${values_file})
     if [[ -z ${volumes} ]]; then
         echo "s!<%volumes%>!!g" >> ${sed_script}
     else
@@ -294,10 +294,10 @@ function extra_docker_flags(){
                 result+=" --security-opt seccomp=unconfined"
             fi
             local port
-            for port in $(cat ${values_file} | jq -cr '.ports[]?'); do
+            for port in $(jq -cr '.ports[]?' ${values_file}); do
                 result+=" -p ${port}:${port}"
             done
-            local volume_mounts=$(cat ${values_file} | jq -cr '.mounts?.volumes[]?')
+            local volume_mounts=$(jq -cr '.mounts?.volumes[]?' ${values_file})
             local v
             for v in ${volume_mounts}; do
                 local source=$(echo ${v} | jq -rc '.source')
@@ -325,8 +325,8 @@ function load_package_versions () {
     local k
     local v
     # TBD: rewrite this. There must be a better way than reparsing the file for each key.
-    for k in $(cat ${values_file} | jq -r '.versions? | keys? | .[]?'); do
-        v=$(cat ${values_file} | jq -r ".versions.${k}")
+    for k in $(jq -r '.versions? | keys? | .[]?' ${values_file}); do
+        v=$(jq -r ".versions.${k}" ${values_file})
         # convert to uppercase and set the variable
         declare -g ${k^^}_VERSION=${v}
     done
