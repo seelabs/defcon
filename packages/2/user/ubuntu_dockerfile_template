@@ -17,9 +17,12 @@ RUN apt-get update && \
 
 <%data%>
 
-<%volumes%>
-
 <%defcon_packages_postscript%>
 
 <%with_user_home%>
+
+<%run%>
+
+<%volumes%>
+
 

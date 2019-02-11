@@ -269,6 +269,22 @@ EOF
         echo "!g" >> "${sed_script}"
     fi
 
+    local run_on_create
+    run_on_create=$(jq -cr '.run.on_create[]?' "${values_file}")
+    if [[ -z ${run_on_create} ]]; then
+        echo "s!<%run%>!!g" >> "${sed_script}"
+    else
+        echo "s!<%run%>!\\" >> "${sed_script}"
+        local saved_ifs=$IFS
+        local IFS=$'\n'
+        local r
+        for r in ${run_on_create}; do
+            echo "RUN ${r}\\" >> "${sed_script}"
+        done
+        echo "!g" >> "${sed_script}"
+        IFS=${saved_ifs}
+    fi
+
     sed -f "${sed_script}" "${template_file}" > "${out_file}"
 
     rm -fr ${tmpdir}
@@ -326,7 +342,7 @@ function extra_docker_flags(){
             ;;
         push)
             ;;
-        \?)
+        *)
             echo "Invalid command in extra_docker_flags: ${command}"
             exit 1
             ;;
@@ -465,7 +481,7 @@ function create_command() {
             user-dev)
                 create_user_dev
                 ;;
-            \?)
+            *)
                 echo "Invalid component: ${component}"
                 usage
                 exit 1
@@ -508,7 +524,7 @@ function push_command() {
     else
         echo "Invalid component: ${component}"
         usage
-        exit 1
+
     fi
 }
 
@@ -531,7 +547,7 @@ run_command() {
                 run_user_dev
                 exit 0
                 ;;
-            \?)
+            *)
                 echo "Invalid component: ${component}"
                 usage
                 exit 1
@@ -553,7 +569,7 @@ case ${command} in
         push_command ${component} "${@}"
         exit 0
         ;;
-    \?)
+    *)
         echo "Invalid command: ${command}"
         usage
         exit 1

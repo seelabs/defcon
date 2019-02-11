@@ -39,8 +39,12 @@
       "target": "/opt/rippled_bld"
     },
     {
-      "source": "./../server/rippled.cfg",
+      "source": "./rippled.cfg",
       "target": "/opt/rippled/."
+    },
+    {
+      "source": "./rippled_docker_helpers.sh",
+      "target": "/opt/rippled_bld/."
     }
   ],
   "volumes": [
@@ -58,6 +62,10 @@
         "target": "/opt/rippled"
       }
     ]
+  },
+  "run": {
+      "on_create": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
+      "on_run": ["/opt/rippled_bld/rippled_docker_helpers.sh run /opt/rippled_bld/rippled gcc.debug.unity"]
   },
   "with_debugger": true,
   "ports": [
