@@ -17,7 +17,7 @@ function create_emacs() {
     local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
     if [[ -e /proc/sys/kernel/randomize_va_space ]]; then
         if [[ $(cat /proc/sys/kernel/randomize_va_space) != 0 ]]; then
-           echo "Building emacs requires that randomize_va_space is disabled"
+           echo "Building emacs requires that randomize_va_space is disabled" >&2
            exit 1
         fi
     fi

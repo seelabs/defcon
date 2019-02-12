@@ -2,7 +2,7 @@
 
 function rippled_image_name(){
     if [[ $# -lt 1 ]]; then
-        echo "Error: Must specify subcomponent in ${FUNCNAME[0]}"
+        echo "Error: Must specify subcomponent in ${FUNCNAME[0]}" >&2
         usage
         exit 1
     fi
@@ -18,7 +18,7 @@ function create_rippled() {
     local this_dir=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 
     if [[ $# -lt 1 ]]; then
-        echo "Error: Must specify exactly one subcomponent in ${FUNCNAME[0]}. Found: ${*}"
+        echo "Error: Must specify exactly one subcomponent in ${FUNCNAME[0]}. Found: ${*}" >&2
         usage
         exit 1
     fi
@@ -27,7 +27,7 @@ function create_rippled() {
     case ${subcomponent} in
         base)
             if [[ $# -ne 0 ]]; then
-                echo "Error: Too many arguments in ${FUNCNAME[0]} base. Found: ${*}"
+                echo "Error: Too many arguments in ${FUNCNAME[0]} base. Found: ${*}" >&2
                 usage
                 exit 1
             fi
@@ -42,14 +42,14 @@ function create_rippled() {
             ;;
         dev)
             if [[ $# -ne 2 ]]; then
-                echo "Error: Must specify github_repo and github_branch in ${FUNCNAME[0]} dev"
+                echo "Error: Must specify github_repo and github_branch in ${FUNCNAME[0]} dev" >&2
                 exit 1
             fi
             local GITHUB_REPO=${1}; shift
             local GIT_BRANCH=${1}; shift
 
             if [[ -z ${GITHUB_REPO} || -z ${GIT_BRANCH} ]]; then
-                echo "Error: Must specify github_repo and github_branch in ${FUNCNAME[0]} dev"
+                echo "Error: Must specify github_repo and github_branch in ${FUNCNAME[0]} dev" >&2
                exit 1
             fi
 
@@ -65,7 +65,7 @@ function create_rippled() {
                    ${proj_dir}
             ;;
         \?)
-            echo "Invalid subcomponent in ${FUNCNAME[0]}: ${subcomponent}"
+            echo "Invalid subcomponent in ${FUNCNAME[0]}: ${subcomponent}" >&2
             exit 1
             ;;
     esac
@@ -73,7 +73,7 @@ function create_rippled() {
 
  function run_rippled(){
      if [[ $# -lt 1 ]]; then
-         echo "Error: Must specify exactly one subcomponent in run_rippled. Found: ${@}"
+         echo "Error: Must specify exactly one subcomponent in run_rippled. Found: ${@}" >&2
          usage
          exit 1
      fi
@@ -82,7 +82,7 @@ function create_rippled() {
      case ${subcomponent} in
          dev)
              if [[ $# -ne 2 ]]; then
-                 echo "Error: Must specify github_repo and github_branch in ${FUNCNAME[0]} dev"
+                 echo "Error: Must specify github_repo and github_branch in ${FUNCNAME[0]} dev" >&2
                  exit 1
              fi
              local GITHUB_REPO=${1}; shift
@@ -98,8 +98,8 @@ function create_rippled() {
                    /bin/bash
              docker container rm ${name}
              ;;
-         \?)
-             echo "Invalid subcomponent in ${FUNCNAME[0]}: ${subcomponent}"
+         *)
+             echo "Invalid subcomponent in ${FUNCNAME[0]}: ${subcomponent}" >&2
              exit 1
              ;;
      esac

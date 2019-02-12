@@ -44,7 +44,7 @@ function populate_package_arrays_dir_and_priority(){
     local d=${1}
     local priority=${2}
     if ! is_valid_package_priority ${priority}; then
-        echo "Invalid package priority ${priority}"
+        echo "Invalid package priority ${priority}" >&2
         exit 1
     fi
     local p
@@ -52,7 +52,7 @@ function populate_package_arrays_dir_and_priority(){
         p=$(basename "${p}")
         if $(is_valid_package_dir "${d}"/"${p}"); then
             if [[ -n ${package_priority["${p}"]} ]]; then
-                echo "Error: Duplicate package ${p} detected"
+                echo "Error: Duplicate package ${p} detected" >&2
                 exit 1
             fi
             package_priority["${p}"]=${priority}
@@ -90,7 +90,7 @@ function source_package_hooks_for_priority(){
 function source_package_hooks(){
     package="${1}"
     if [[ -z ${package_priority["${package}"]} ]]; then
-        echo "Error: Invalid package in source_package_and_ancestors_hooks: ${package}"
+        echo "Error: Invalid package in source_package_and_ancestors_hooks: ${package}" >&2
         exit 1
     fi
     source_package_hooks_for_priority ${package_priority["${package}"]}
@@ -102,7 +102,7 @@ function source_package_hooks(){
 # Check if the json values file has the specified key set to true
 function is_json_config_key_on() {
     if [[ ${#} -ne 2 ]]; then
-        echo "${FUNCNAME[0]} must specify values_file and key. Got: ${*}"
+        echo "${FUNCNAME[0]} must specify values_file and key. Got: ${*}" >&2
         exit 1
     fi
     local values_file=${1}; shift
@@ -112,7 +112,7 @@ function is_json_config_key_on() {
 
 function dockerfile_from_template() {
     if [[ ${#} -ne 3 ]]; then
-        echo "${FUNCNAME[0]} must specify template_file, values_file, and out file. Got: ${*}"
+        echo "${FUNCNAME[0]} must specify template_file, values_file, and out file. Got: ${*}" >&2
         exit 1
     fi
 
@@ -133,14 +133,14 @@ function dockerfile_from_template() {
         local base_project
         base_project=$(jq -r '.base_project? // empty' "${values_file}")
         if [[ -z ${base_project} ]]; then
-            echo "Error: Json file ${values_file} does not specify a base project."
+            echo "Error: Json file ${values_file} does not specify a base project." >&2
             exit 1
         else
             replacement=$(${base_project}_image_name base)
         fi
     fi
     if [[ -z ${replacement} ]]; then
-        echo "Error: Json file ${values_file} does not specify a base project or a base image."
+        echo "Error: Json file ${values_file} does not specify a base project or a base image." >&2
         exit 1
     fi
 
@@ -301,7 +301,7 @@ function cleanup_staging(){
 
 function extra_docker_flags(){
     if [[ ${#} -ne 2 ]]; then
-        echo "${FUNCNAME[0]} must specify command and values_values files. Got: ${*}"
+        echo "${FUNCNAME[0]} must specify command and values_values files. Got: ${*}" >&2
         exit 1
     fi
 
@@ -351,7 +351,7 @@ function extra_docker_flags(){
         push)
             ;;
         *)
-            echo "Invalid command in extra_docker_flags: ${command}"
+            echo "Invalid command in extra_docker_flags: ${command}" >&2
             exit 1
             ;;
     esac
@@ -361,7 +361,7 @@ function extra_docker_flags(){
 
 function load_package_versions () {
     if [[ ${#} -ne 1 ]]; then
-        echo "${FUNCNAME[0]} values_file. Got: ${*}"
+        echo "${FUNCNAME[0]} values_file. Got: ${*}" >&2
         exit 1
     fi
     local values_file=${1}; shift
@@ -382,16 +382,18 @@ valid_components=(gcc rippled_dev_base base rippled-dev user-dev rippled-deploy 
 
 
 function usage(){
-    echo "Usage: ${BASH_SOURCE[0]} [options] <command> <component or package> [<subcommand>]"
-    echo "Valid commands are: ${valid_commands[*]}"
-    echo "Valid components are: ${valid_components[*]}"
-    echo "Valid packages are: ${!package_path[*]}"
-    echo " Note: packages can be specified by priority, in which case all packages at that priority are used."
-    echo '       i.e `push 1 latest` will run the push <component> latest for all components at priority 1.'
-    echo "Valid options are: "
-    echo " -f config_file : json file of container options"
-    echo "Valid push subcommands are: "
-    echo " latest : tag current version as latest when pushing"
+    cat <<EOF >&2
+    Usage: ${BASH_SOURCE[0]} [options] <command> <component or package> [<subcommand>]
+    Valid commands are: ${valid_commands[*]}
+    Valid components are: ${valid_components[*]}
+    Valid packages are: ${!package_path[*]}
+     Note: packages can be specified by priority, in which case all packages at that priority are used.
+           i.e `push 1 latest` will run the push <component> latest for all components at priority 1.'
+    Valid options are:
+     -f config_file : json file of container options
+    Valid push subcommands are:
+     latest : tag current version as latest when pushing
+EOF
 }
 
 # check if an array contain a value
@@ -411,7 +413,7 @@ while getopts ":f:" opt; do
     case $opt in
         f)
             if ! hash jq &>/dev/null; then
-                echo "The jq program is required to parse json files. Use 'sudo apt install jq' to install it."
+                echo "The jq program is required to parse json files. Use 'sudo apt install jq' to install it." >&2
                 exit 1
             fi
             options_file=$(realpath "${OPTARG}")
@@ -424,7 +426,7 @@ while getopts ":f:" opt; do
 done
 
 if [[ $# -lt 2 ]]; then
-    echo "Error: Too few arguments: $#. Requires at least command and component."
+    echo "Error: Too few arguments: $#. Requires at least command and component." >&2
     usage
     exit 1
 fi
@@ -433,7 +435,7 @@ command=${1}; shift;
 component=${1}; shift;
 
 if ! array_contains "${command}" "${valid_commands[@]}"; then
-    echo "Invalid command: ${command}"
+    echo "Invalid command: ${command}" >&2
     usage
     exit 1
 fi
@@ -441,14 +443,14 @@ fi
 populate_package_arrays "${packages_dir}"
 
 if ! (array_contains "${component}" "${valid_components[@]}" || is_valid_package ${component} || is_valid_package_priority ${component}) ; then
-    echo "Invalid component: ${component}"
+    echo "Invalid component: ${component}" >&2
     usage
     exit 1
 fi
 
 function create_command() {
     if [[ $# -lt 1 ]]; then
-        echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}"
+        echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}" >&2
         exit 1
     fi
 
@@ -476,7 +478,7 @@ function create_command() {
         create_${component} "${@}"
     elif is_valid_package_priority ${component}; then
         if [[ $# -ne 0 ]]; then
-            echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}"
+            echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}" >&2
             exit 1
         fi
         source_package_hooks_for_priority ${component}
@@ -490,7 +492,7 @@ function create_command() {
                 create_user_dev
                 ;;
             *)
-                echo "Invalid component: ${component}"
+                echo "Invalid component: ${component}" >&2
                 usage
                 exit 1
                 ;;
@@ -501,13 +503,13 @@ function create_command() {
 function push_command() {
     # Thie may be called as push_command <component> [subcomponent] [latest]
     if [[ ${#} -lt 1 ]]; then
-        echo "Error: Must specify component in ${FUNCNAME[0]}."
+        echo "Error: Must specify component in ${FUNCNAME[0]}." >&2
         exit 1
     elif [[ $# -gt 3 ]]; then
-        echo "Too many parameters in ${FUNCNAME[0]}: ${*}"
+        echo "Too many parameters in ${FUNCNAME[0]}: ${*}" >&2
         exit 1
     elif [[ $# -eq 3 && ${@: -1} != "latest" ]]; then
-        echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}"
+        echo "Invalid subcommand to ${FUNCNAME[0]}: ${*}" >&2
         exit 1
     fi
 
@@ -538,7 +540,7 @@ function push_command() {
 
 run_command() {
     if [[ $# -lt 1 ]]; then
-        echo "Must specify component to run: ${*}."
+        echo "Must specify component to run: ${*}." >&2
         exit 1
     fi
 
@@ -547,7 +549,7 @@ run_command() {
         source_package_hooks ${component}
         run_${component} "${@}"
     elif is_valid_package_priority ${component}; then
-        echo "Error: the run command does not support running all packages at a given priority"
+        echo "Error: the run command does not support running all packages at a given priority" >&2
         exit 1
     else
         case ${component} in
@@ -556,7 +558,7 @@ run_command() {
                 exit 0
                 ;;
             *)
-                echo "Invalid component: ${component}"
+                echo "Invalid component: ${component}" >&2
                 usage
                 exit 1
                 ;;
@@ -578,7 +580,7 @@ case ${command} in
         exit 0
         ;;
     *)
-        echo "Invalid command: ${command}"
+        echo "Invalid command: ${command}" >&2
         usage
         exit 1
         ;;

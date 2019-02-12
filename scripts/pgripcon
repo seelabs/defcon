@@ -7,8 +7,10 @@ set -eo pipefail
 valid_commands=(psql port)
 
 function usage(){
-    echo "Usage: ${BASH_SOURCE[0]} command"
-    echo "Valid commands are: ${valid_commands[@]}"
+    cat<<EOF >&2
+Usage: ${BASH_SOURCE[0]} command
+Valid commands are: ${valid_commands[@]}
+EOF
 }
 
 # check if an array contain a value
@@ -36,7 +38,7 @@ function run_psql(){
 # main
 
 if [[ $# -ne 1 ]]; then
-    echo "Error: Expected exactly one argument: $#"
+    echo "Error: Expected exactly one argument: $#" >&2
     usage
     exit 1
 fi
@@ -44,7 +46,7 @@ fi
 command=${1}; shift;
 
 if ! array_contains ${command} "${valid_commands[@]}"; then
-    echo "Invalid command: ${command}"
+    echo "Invalid command: ${command}" >&2
     usage
     exit 1
 fi
@@ -58,8 +60,8 @@ case ${command} in
         container_port
         exit 0
         ;;
-    \?)
-        echo "Invalid command: ${command}"
+    *)
+        echo "Invalid command: ${command}" >&2
         usage
         exit 1
         ;;

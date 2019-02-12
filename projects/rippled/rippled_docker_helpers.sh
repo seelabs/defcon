@@ -4,7 +4,7 @@ set -eo pipefail
 
 function build_rippled_target(){
     if [[ $# -ne 2 ]]; then
-        echo "Error: call to ${FUNCNAME[0]} must specify rippled_proj_dir and build_target. Got: ${*}"
+        echo "Error: call to ${FUNCNAME[0]} must specify rippled_proj_dir and build_target. Got: ${*}" >&2
         exit 1
     fi
 
@@ -38,7 +38,7 @@ function build_rippled_target(){
 
 function run_rippled_target(){
     if [[ $# -lt 2 ]]; then
-        echo "Error: call to ${FUNCNAME[0]} must specify rippled_proj_dir and build_target. Got: ${*}"
+        echo "Error: call to ${FUNCNAME[0]} must specify rippled_proj_dir and build_target. Got: ${*}" >&2
         exit 1
     fi
 
@@ -50,7 +50,7 @@ function run_rippled_target(){
     local cmake_build_dir=build/${build_target}
     local exe_name="${cmake_build_dir}"/rippled
     if [[ ! -x "${exe_name}" ]]; then
-        echo "Error: ${FUNCNAME[0]}: ${exe_name} executable not found"
+        echo "Error: ${FUNCNAME[0]}: ${exe_name} executable not found" >&2
         exit 1
     fi
 
@@ -65,7 +65,7 @@ function run_rippled_target(){
 
 if [[ $# -lt 3 ]]; then
     script_name=$(basename "${BASH_SOURCE[0]}")
-    echo "Error: call to ${script_name} must specify command rippled_proj_dir and build_target. Got: ${*}"
+    echo "Error: call to ${script_name} must specify command rippled_proj_dir and build_target. Got: ${*}" >&2
     exit 1
 fi
 
@@ -78,7 +78,7 @@ case "${command}" in
         run_rippled_target "${@}"
         ;;
     *)
-        echo "Invalid command: ${command}"
+        echo "Invalid command: ${command}" >&2
         usage
         exit 1
         ;;

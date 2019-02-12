@@ -3,7 +3,7 @@
 set -exo pipefail
 
 if [[ ${#} -ne 1 ]]; then
-    echo "script must be called with either a version number or `install`"
+    echo "script must be called with either a version number or `install`" >&2
     exit 1
 fi
 
