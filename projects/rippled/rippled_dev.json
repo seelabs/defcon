@@ -46,15 +46,10 @@
     }
   ],
   "volumes": [
-    "/opt/rippled_bld",
     "/opt/rippled"
   ],
   "mounts": {
     "volumes": [
-      {
-        "source": "rippled_opt_bld",
-        "target": "/opt/rippled_bld"
-      },
       {
         "source": "rippled_opt",
         "target": "/opt/rippled"
