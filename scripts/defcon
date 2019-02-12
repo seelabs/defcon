@@ -299,7 +299,7 @@ EOF
 }
 
 function cleanup_staging(){
-    rm ${proj_dir}/staging/temp.*
+    rm ${proj_dir}/staging/temp.* >& /dev/null
 }
 
 function extra_docker_flags(){
