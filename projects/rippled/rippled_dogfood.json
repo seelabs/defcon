@@ -8,20 +8,11 @@
   "packages": {
     "apt": [
       "git",
-      "ccache",
-      "fonts-font-awesome",
-      "fonts-ubuntu",
-      "gnupg2",
       "jq",
-      "libcapnp-dev",
-      "manpages-dev",
       "ninja-build",
       "silversearcher-ag",
-      "stow",
       "sudo",
-      "tmux",
-      "wmctrl",
-      "zsh"
+      "tmux"
     ],
     "defcon": [
       "gdb"
@@ -57,6 +48,7 @@
   },
   "run": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
   "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
+  "detached": true,
   "with_debugger": true,
   "ports": [
     51235

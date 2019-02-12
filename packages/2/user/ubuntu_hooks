@@ -70,8 +70,7 @@ function create_user() {
      docker run -it \
             $(extra_docker_flags run ${options_file}) \
             --name ${name} \
+            --rm \
             $(user_image_name) \
             ${to_run}
-
-     docker container rm ${name}
  }

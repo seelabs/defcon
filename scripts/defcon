@@ -333,6 +333,9 @@ function extra_docker_flags(){
             if is_json_config_key_on "${values_file}" with_reverse_debugger; then
                 result+=" --security-opt seccomp=unconfined"
             fi
+            if is_json_config_key_on "${values_file}" detached; then
+                result+=" -d"
+            fi
             local port
             for port in $(jq -cr '.ports[]?' "${values_file}"); do
                 result+=" -p ${port}:${port}"

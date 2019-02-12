@@ -178,6 +178,13 @@ running a dogfood version of rippled:
   "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
 ```
 
+`detached`: boolean that determines if the container should be run in detached
+mode when started. Example:
+
+```
+  "detached": true
+```
+
 `with_user_home` is a boolean that determines if the user's home directory will
 be automatically mounted in the container. Setting this flag will also create a
 user in the container with the same user id and user name as the user running
@@ -220,7 +227,6 @@ can be run in the container (by default, security settings will not allow
 performance counters to run in the container, which rr need to run). Setting
 this will case `--security-opt seccomp=unconfined` to bet set when running the
 container. `with_debugger` is _not_ automatically set and should be set
-separately. Example:
 
 ```
   "with_reverse_debugger": true
