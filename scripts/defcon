@@ -270,7 +270,7 @@ EOF
     fi
 
     local run_on_create
-    run_on_create=$(jq -cr '.run.on_create[]?' "${values_file}")
+    run_on_create=$(jq -cr '.run[]?' "${values_file}")
     if [[ -z ${run_on_create} ]]; then
         echo "s!<%run%>!!g" >> "${sed_script}"
     else
@@ -283,6 +283,14 @@ EOF
         done
         echo "!g" >> "${sed_script}"
         IFS=${saved_ifs}
+    fi
+
+    local cmd_on_create
+    cmd=$(jq -cr '.cmd?' "${values_file}")
+    if [[ -z ${run_on_create} ]]; then
+        echo "s!<%cmd%>!!g" >> "${sed_script}"
+    else
+        echo "s!<%cmd%>!CMD ${cmd}!g" >> "${sed_script}"
     fi
 
     sed -f "${sed_script}" "${template_file}" > "${out_file}"
@@ -406,7 +414,7 @@ while getopts ":f:" opt; do
                 echo "The jq program is required to parse json files. Use 'sudo apt install jq' to install it."
                 exit 1
             fi
-            options_file="${OPTARG}"
+            options_file=$(realpath "${OPTARG}")
             load_package_versions "${options_file}"
             shift;shift
             ;;

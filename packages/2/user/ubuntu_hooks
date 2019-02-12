@@ -61,10 +61,17 @@ function create_user() {
      fi
 
      local name="user_dev_env${RANDOM}"
+     local to_run
+     if [[ -z $(jq '.cmd?' "${options_file}") ]]; then
+        # only run a shell on containers without a default cmd
+        local to_run=${SHELL}
+     fi
+
      docker run -it \
             $(extra_docker_flags run ${options_file}) \
             --name ${name} \
             $(user_image_name) \
-            ${SHELL}
+            ${to_run}
+
      docker container rm ${name}
  }

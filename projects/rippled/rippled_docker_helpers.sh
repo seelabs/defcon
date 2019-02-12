@@ -3,9 +3,9 @@
 set -eo pipefail
 
 function build_rippled_target(){
-
     if [[ $# -ne 2 ]]; then
         echo "Error: call to ${FUNCNAME[0]} must specify rippled_proj_dir and build_target. Got: ${*}"
+        exit 1
     fi
 
     local rippled_proj_dir=${1}; shift
@@ -39,10 +39,11 @@ function build_rippled_target(){
 function run_rippled_target(){
     if [[ $# -lt 2 ]]; then
         echo "Error: call to ${FUNCNAME[0]} must specify rippled_proj_dir and build_target. Got: ${*}"
+        exit 1
     fi
 
-    local rippled_proj_dir=${1}; shift
-    local build_target=${1}; shift
+    local rippled_proj_dir="${1}"; shift
+    local build_target="${1}"; shift
     local num_jobs
     pushd "${rippled_proj_dir}"
 
@@ -54,7 +55,7 @@ function run_rippled_target(){
     fi
 
     pushd ${cmake_build_dir}
-    run_rippled_target "${@}" |& tee log_${RANDOM}.txt
+    ./rippled "${@}" |& tee log_${RANDOM}.txt
     local result=${PIPESTATUS[0]}
     popd # ${cmake_build_dir}
 
@@ -68,8 +69,8 @@ if [[ $# -lt 3 ]]; then
     exit 1
 fi
 
-command=${1}; shift
-case ${command} in
+command="${1}"; shift
+case "${command}" in
     build)
         build_rippled_target "${@}"
         ;;

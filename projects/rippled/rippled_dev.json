@@ -25,8 +25,6 @@
       "zsh"
     ],
     "defcon": [
-      "clang",
-      "emacs",
       "gdb"
     ]
   },
@@ -63,10 +61,8 @@
       }
     ]
   },
-  "run": {
-      "on_create": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
-      "on_run": ["/opt/rippled_bld/rippled_docker_helpers.sh run /opt/rippled_bld/rippled gcc.debug.unity"]
-  },
+  "run": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
+  "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
   "with_debugger": true,
   "ports": [
     51235
