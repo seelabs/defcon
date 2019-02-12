@@ -8,14 +8,15 @@ where the editor, compiler, debugger, and shells, will all be run within the
 docker container. Defcon current focuses on using docker for development, though
 it may be extended to support deployment.
 
-The `defcon` script is used to create and run containers. A container is usually created by using one of the config files in
-the configs directory. For example:
+The `defcon` script is used to create and run containers. A container is usually
+created by using one of the config files in the configs directory. For example:
 
 ```
 scripts/defcon -f configs/user_rippled_dev.json create user
 ```
 
-To run a container, use the run command instead of the `create` command: For example:
+To run a container, use the run command instead of the `create` command: For
+example:
 
 ```
 scripts/defcon -f configs/user_rippled_dev.json run user
@@ -41,8 +42,9 @@ and running gui programs). When running or creating packages, the `-f
 The json config file may contain the following keys:
 
 `name` This is the name of docker image to create or run. Example:
+
 ```
-  "name": "user_dev_rippled:1.3"
+  "name": "seelabs/rippled_dogfood:1.3"
 ```
 
 `base_project` This is the name of the base project to use as the base image
@@ -54,16 +56,18 @@ Example:
   "base_project": "gcc"
 ```
 
-`base_image` This is similar to `base_project` in that it specifies a base image to use for the newly created image. Unlike
+`base_image` This is similar to `base_project` in that it specifies a base image
+to use for the newly created image. Unlike `base_project`, the image name is
+specified directly, rather than computed from a project name. This is useful for
+building on top of other images specified with a json file. Example:
 
-`base_project`, the image name is specified directly, rather than computed from a project name. This is useful for building on
-top of other images specified with a json file. Example:
 ```
   "base_image": "seelabs/rippy_base:0.1"
 ```
 
 `versions`: This is a dictionary of versions to use for other defcon packages,
-such as dependencies built from source or base images of other projects. Example:
+such as dependencies built from source or base images of other projects.
+Example:
 
 ```
   "versions": {
@@ -73,8 +77,10 @@ such as dependencies built from source or base images of other projects. Example
   }
 ```
 
-`packages`: This specifies a dictionary of list of packages to install using either a ubuntu's apt package manager, python's pip3 package manager, or
-defcon packages of dependencies built from source. Example:
+`packages`: This specifies a dictionary of list of packages to install using
+either a ubuntu's apt package manager, python's pip3 package manager, or defcon
+packages of dependencies built from source. Example:
+
 ```
 {
   "packages": {
@@ -123,7 +129,9 @@ defcon packages of dependencies built from source. Example:
   ]
 ```
 
-`volumes` is a list of directories in the containers that are used as volumes. Example:
+`volumes` is a list of directories in the containers that are used as volumes.
+Example:
+
 ```
   "volumes": [
     "/opt/rippled_bld",
@@ -131,8 +139,11 @@ defcon packages of dependencies built from source. Example:
   ]
 ```
 
-`mounts` is a dictionary of mount types (currently only `volumes` is supported). The `volumes` key contains a list of dictionaries with
-a key for the source volume, and a key for the target directory in the container to mount the volume. Example:
+`mounts` is a dictionary of mount types (currently only `volumes` is supported).
+The `volumes` key contains a list of dictionaries with a key for the source
+volume, and a key for the target directory in the container to mount the volume.
+Example:
+
 ```
   "mounts": {
     "volumes": [
@@ -149,19 +160,47 @@ a key for the source volume, and a key for the target directory in the container
 
 ```
 
-`with_user_home` is a boolean that determines if the user's home directory will be automatically mounted in the container. Setting this flag will also
-create a user in the container with the same user id and user name as the user running the `defcon` script. When running the container, the user will
-be set to the current user and the user's shell will be run. Example:
+`run` is a list of commands to run when a container is created. One use of `run`
+is to build a project after it has been cloned into a container. This could be
+done by copying a script from the host to the container and running that script.
+Example:
+
+```
+  "run": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
+```
+
+`cmd` is the default command to run when a container is started. One use of
+`cmd` is to start a server, such as rippled. This could be done by copying a
+script from the host to the container and running that script. Example for
+running a dogfood version of rippled:
+
+```
+  "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
+```
+
+`with_user_home` is a boolean that determines if the user's home directory will
+be automatically mounted in the container. Setting this flag will also create a
+user in the container with the same user id and user name as the user running
+the `defcon` script. When running the container, the user will be set to the
+current user and the user's shell will be run. Example:
+
 ```
   "with_user_home": true
 ```
 
-`with_gui` is a boolean that determines if gui programs can be run from within the container. Setting this will mount the `/tmp/.X11-unix` file within the container and will also set the `-e DISPLAY=unix$DISPLAY` when running the container. Exmaple:
+`with_gui` is a boolean that determines if gui programs can be run from within
+the container. Setting this will mount the `/tmp/.X11-unix` file within the
+container and will also set the `-e DISPLAY=unix$DISPLAY` when running the
+container. Exmaple:
+
 ```
   "with_gui": true
 ```
 
-`with_sound` is a boolean that determines if sound can be played from within the container. Setting this will case a `--define /dev/snd` to be set when running the container. Exmaple:
+`with_sound` is a boolean that determines if sound can be played from within the
+container. Setting this will case a `--define /dev/snd` to be set when running
+the container. Exmaple:
+
 ```
   "with_sound": true
 ```
@@ -171,21 +210,25 @@ be set to the current user and the user's shell will be run. Example:
 container (by default, security settings will not allow ptrace to run in the
 container, which debugger need to run). Setting this will case
 `--cap-add=SYS_PTRACE` to bet set when running the container. Example:
+
 ```
   "with_debugger": true
 ```
 
-`with_reverse_debugger` is a boolean that determines if the reverse debugger rr can be run in the
-container (by default, security settings will not allow performance counters to run in the
-container, which rr need to run). Setting this will case
-`--security-opt seccomp=unconfined` to bet set when running the container. `with_debugger` is _not_ automatically set
-and should be set separately. Example:
+`with_reverse_debugger` is a boolean that determines if the reverse debugger rr
+can be run in the container (by default, security settings will not allow
+performance counters to run in the container, which rr need to run). Setting
+this will case `--security-opt seccomp=unconfined` to bet set when running the
+container. `with_debugger` is _not_ automatically set and should be set
+separately. Example:
 
 ```
   "with_reverse_debugger": true
 ```
 
-`ports` is a list of ports to expose from the container. Setting this will add `-p <port>:<port>` for each port specified when running the container (with <port> replaced with the specifed port). Example:
+`ports` is a list of ports to expose from the container. Setting this will add
+`-p <port>:<port>` for each port specified when running the container (with
+<port> replaced with the specifed port). Example:
 
 ```
   "ports": [
