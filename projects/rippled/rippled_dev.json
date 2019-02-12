@@ -1,9 +1,8 @@
 {
-  "name": "dev_rippled:1.3",
+  "name": "seelabs/rippled_dogfood:1.3",
   "base_project": "rippled",
   "versions": {
     "rippled": "1.3",
-    "clang": "7",
     "gdb": "8.2"
   },
   "packages": {
