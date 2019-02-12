@@ -128,14 +128,11 @@ function dockerfile_from_template() {
     local placeholder
     local replacement
     placeholder=base_layer
-    replacement=$(jq -r ".base_image?" "${values_file}")
-    if [[ ${replacement} = null ]]; then
-        replacement="";
-    fi
+    replacement=$(jq -r '.base_image? // empty' "${values_file}")
     if [[ -z ${replacement} ]]; then
         local base_project
-        base_project=$(jq -r ".base_project?" "${values_file}")
-        if [[ -z ${base_project} || ${base_project} = null ]]; then
+        base_project=$(jq -r '.base_project? // empty' "${values_file}")
+        if [[ -z ${base_project} ]]; then
             echo "Error: Json file ${values_file} does not specify a base project."
             exit 1
         else
