@@ -65,7 +65,7 @@ function create_user() {
 
      local name="user_dev_env${RANDOM}"
      local to_run
-     if [[ -z $(jq '.cmd? // empty' "${options_file}") ]]; then
+     if [[ -z "$(jq '.cmd? // empty' ${options_file})" ]]; then
         # only run a shell on containers without a default cmd
         to_run=${SHELL}
      fi
