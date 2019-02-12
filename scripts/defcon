@@ -380,7 +380,6 @@ function load_package_versions () {
 valid_commands=(create run push)
 valid_components=(gcc rippled_dev_base base rippled-dev user-dev rippled-deploy rippled-dogfood)
 
-
 function usage(){
     cat <<EOF >&2
     Usage: ${BASH_SOURCE[0]} [options] <command> <component or package> [<subcommand>]
@@ -388,7 +387,7 @@ function usage(){
     Valid components are: ${valid_components[*]}
     Valid packages are: ${!package_path[*]}
      Note: packages can be specified by priority, in which case all packages at that priority are used.
-           i.e `push 1 latest` will run the push <component> latest for all components at priority 1.'
+           i.e 'push 1 latest' will run the push <component> latest for all components at priority 1.'
     Valid options are:
      -f config_file : json file of container options
     Valid push subcommands are:
