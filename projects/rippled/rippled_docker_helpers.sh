@@ -55,13 +55,42 @@ function run_rippled_target(){
     fi
 
     pushd ${cmake_build_dir}
+    set +eo pipefail
     ./rippled "${@}" |& tee log_${RANDOM}.txt
     local result=${PIPESTATUS[0]}
+    if [[ ${result} != 0 && -n ${core_directory} ]]; then
+        cp core* ${core_directory}/.
+    fi
+    set -eo pipefail
     popd # ${cmake_build_dir}
 
     popd # ${rippled_proj_dir}
     return ${result}
 }
+
+function usage(){
+    cat <<EOF >&2
+    Usage: ${BASH_SOURCE[0]} [options] <command> <rippled_proj_dir> <build_target>
+    Valid commands are: build run
+    Valid options are:
+     -c core_directory : directory to put cores (so may be saved on a volume)
+EOF
+}
+
+
+while getopts ":c:" opt; do
+    case ${opt} in
+        c)
+            core_directory=$(realpath "${OPTARG}")
+            shift;shift
+            ;;
+        \?)
+            echo "Invalid option -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
 
 if [[ $# -lt 3 ]]; then
     script_name=$(basename "${BASH_SOURCE[0]}")

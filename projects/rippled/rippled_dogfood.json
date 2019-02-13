@@ -12,7 +12,9 @@
       "ninja-build",
       "silversearcher-ag",
       "sudo",
-      "tmux"
+      "tmux",
+      "vim",
+      "zsh"
     ],
     "defcon": [
       "gdb"
@@ -47,7 +49,7 @@
     ]
   },
   "run": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
-  "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
+  "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "-c", "/opt/rippled", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
   "detached": true,
   "with_debugger": true,
   "ports": [

@@ -291,6 +291,16 @@ counters need for `rr`. In addition, it will expose port `51235` to rippled can
 connect to the networks. To run GUI programs, it will map the X11 socket into
 the container and set the display.
 
+### Core Dumps
+
+Getting a core dump in a container requires that the `core_pattern` on the
+_host_ is set to a location available in the container. Since the container and
+the host share a kernel, and the kernel controls how cores are written (and this
+is not part of some namespace), then for now this hack has to susfice. One
+example pattern set using `sysctl` would be `sysctl kernel.core_pattern =
+core.%e.%p.%h.%t`. For the rippled docker helper scripts to work, the core must begin
+with the pattern 'core'.
+
 ### Emacs Notes
 
 Emacs requires dumping an executable's state (it does this to minimize startup
