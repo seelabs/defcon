@@ -56,10 +56,11 @@ function run_rippled_target(){
 
     pushd ${cmake_build_dir}
     set +eo pipefail
-    ./rippled "${@}" |& tee log_${RANDOM}.txt
-    local result=${PIPESTATUS[0]}
+    ./rippled "${@}" >& /dev/null
+    local result=$?
     if [[ ${result} != 0 && -n ${core_directory} ]]; then
-        cp core* ${core_directory}/.
+        # use find to make dealing with files with spaces in their names easier
+        find . -maxdepth 1 -name "core*" -exec cp '{}' ${core_directory}/. ';'
     fi
     set -eo pipefail
     popd # ${cmake_build_dir}

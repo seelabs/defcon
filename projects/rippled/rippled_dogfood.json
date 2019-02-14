@@ -1,58 +1,58 @@
 {
-  "name": "seelabs/rippled_dogfood:1.3",
-  "base_project": "rippled",
-  "versions": {
-    "rippled": "1.3",
-    "gdb": "8.2"
-  },
-  "packages": {
-    "apt": [
-      "git",
-      "jq",
-      "ninja-build",
-      "silversearcher-ag",
-      "sudo",
-      "tmux",
-      "vim",
-      "zsh"
+    "name": "seelabs/rippled_dogfood:1.3",
+    "base_project": "rippled",
+    "versions": {
+        "rippled": "1.3",
+        "gdb": "8.2"
+    },
+    "packages": {
+        "apt": [
+            "git",
+            "jq",
+            "ninja-build",
+            "silversearcher-ag",
+            "sudo",
+            "tmux",
+            "vim",
+            "zsh"
+        ],
+        "defcon": [
+            "gdb"
+        ]
+    },
+    "data": [
+        {
+            "source": {
+                "repository": "https://github.com/ripple/rippled.git",
+                "branch": "develop"
+            },
+            "target": "/opt/rippled_bld"
+        },
+        {
+            "source": "./rippled.cfg",
+            "target": "/opt/rippled/."
+        },
+        {
+            "source": "./rippled_docker_helpers.sh",
+            "target": "/opt/rippled_bld/."
+        }
     ],
-    "defcon": [
-      "gdb"
-    ]
-  },
-  "data": [
-    {
-      "source": {
-        "repository": "https://github.com/ripple/rippled.git",
-        "branch": "develop"
-      },
-      "target": "/opt/rippled_bld"
-    },
-    {
-      "source": "./rippled.cfg",
-      "target": "/opt/rippled/."
-    },
-    {
-      "source": "./rippled_docker_helpers.sh",
-      "target": "/opt/rippled_bld/."
-    }
-  ],
-  "volumes": [
-    "/opt/rippled"
-  ],
-  "mounts": {
     "volumes": [
-      {
-        "source": "rippled_opt",
-        "target": "/opt/rippled"
-      }
+        "/opt/rippled"
+    ],
+    "mounts": {
+        "volumes": [
+            {
+                "source": "rippled_opt",
+                "target": "/opt/rippled"
+            }
+        ]
+    },
+    "run": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
+    "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "-c", "/opt/rippled", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
+    "detached": true,
+    "with_debugger": true,
+    "ports": [
+        51235
     ]
-  },
-  "run": ["/opt/rippled_bld/rippled_docker_helpers.sh build /opt/rippled_bld/rippled gcc.debug.unity"],
-  "cmd": ["/opt/rippled_bld/rippled_docker_helpers.sh", "-c", "/opt/rippled", "run", "/opt/rippled_bld/rippled", "gcc.debug.unity", "--conf", "/opt/rippled/rippled.cfg", "--fg"],
-  "detached": true,
-  "with_debugger": true,
-  "ports": [
-    51235
-  ]
 }

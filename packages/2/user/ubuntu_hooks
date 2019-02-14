@@ -79,3 +79,43 @@ function create_user() {
             ${image_name} \
             ${to_run}
  }
+
+ function attach_user(){
+     if [[ -z ${options_file} ]]; then
+         echo "Error: must specify an options file in ${FUNCNAME[0]}." >&2
+         exit 1
+     fi
+
+     if [[ $# -gt 1 ]]; then
+         echo "Error: Too many arguments to ${FUNCNAME[0]}. All arguments excpet command to run must come from an options file." >&2
+         usage
+         exit 1
+     fi
+
+     to_run=${SHELL}
+     if [[ $# -eq 1 ]]; then
+         to_run="${1}"
+     fi
+
+     local image_name
+     image_name=$(user_image_name)
+     # check for existing running container using the image
+     local container_name
+     container_name=$(docker ps --filter ancestor="${image_name}" -q)
+     if [[ -n ${container_name} ]]; then
+         docker exec -it "${container_name}" "${to_run}"
+     else
+         # start a new container
+         local name="user_dev_env${RANDOM}"
+
+         tmp_json=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
+         jq 'del(.detached)' ${options_file} > ${tmp_json}
+         docker run -it \
+                $(extra_docker_flags run ${tmp_json}) \
+                --name ${name} \
+                --rm \
+                ${image_name} \
+                "${to_run}"
+         rm ${tmp_json}
+     fi
+ }
