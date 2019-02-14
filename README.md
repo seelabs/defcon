@@ -268,7 +268,7 @@ TBD: Describe how to define package scripts.
 
 ## Defining Development containers
 
-"Development containers" built on top of the project base containers. These
+"Development containers" are built on top of the project base containers. These
 containers will install a set of development tools such as editors, debuggers,
 shells, and code navigation tools. They can optionally create an environment
 with the user's prefered shell and can bind mount a user's home directory so the
@@ -279,6 +279,22 @@ debuggers (for example, docker disables ptrace by default; this is needed for
 gdb). These are custom containers and will not be uploaded to docker hub. Use a
 json config file to define a development container.
 
+## Defining Dogfood containers
+
+"Dogfood containers" " are built on top of the project base containers. Similar
+to "Development Containers" containers will install a set of development tools
+such as debuggers, shells, and code navigation tools. However, they are meant to
+run a service on a dogfood machine. Typically, the container will be running a
+service in detached mode. 
+
+They can be attached to with a shell by running the `defcon attach` command.
+This would use the same json config file as used when running the container.
+When attaching it will run a shell in the existing running container, or create
+a new container and run the shell in the new container (useful for looking at
+core files in the container's volume).
+
+The `attach` command can also be used to run commands other than shells, but it
+is really meant to be used with shells.
 
 ## Notes
 
