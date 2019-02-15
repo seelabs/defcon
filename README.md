@@ -269,6 +269,15 @@ container. `with_debugger` is _not_ automatically set and should be set
   "with_reverse_debugger": true
 ```
 
+`no_cache` is a boolean that sets the `--no-cache` flag when building a
+container. This is useful when a container has a data source that is a git
+branch. Without `no_cache`, the container may not be rebuilt with the tip of
+that branch. Example:
+
+```
+    "no_cache": true
+```
+
 `ports` is a list of ports to expose from the container. Setting this will add
 `-p <port>:<port>` for each port specified when running the container (with
 <port> replaced with the specifed port). Example:

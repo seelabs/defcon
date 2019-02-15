@@ -313,6 +313,9 @@ function extra_docker_flags(){
 
     case ${command} in
         create)
+            if is_json_config_key_on "${values_file}" no_cache; then
+                result+=" --no-cache"
+            fi
             ;;
         run)
             if is_json_config_key_on "${values_file}" with_user_home; then
