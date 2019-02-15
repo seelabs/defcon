@@ -28,8 +28,14 @@ and cores begin with `core`. `ulimit -c` should also be set to `unlimited.`
 
 3) Once in the container, `cd /opt/rippled` and run `gdb
 /opt/rippled_bld/rippled/build/gcc.debug.unity/rippled <core_name>` where <core
-name> should be replaced with the name of the core file. This will bring up gdb. To get a stack trace,
-run `thread apply all bt` from the gdb prompt.
+name> should be replaced with the name of the core file. This will bring up gdb.
+To get a stack trace, run `thread apply all bt` from the gdb prompt. The user's
+home directory will automatically be mounted in the container's `/home/<user
+name>` directory. This can be useful for getting information out of the
+container, and also for having some of the user's usual tools available. (Note,
+see the `with_user_home` configuration variable for more complete support of the
+user's home directory in a container. This will usually be defined for
+development containers, but not dogfood containers).
 
 ## Introduction
 

@@ -110,10 +110,16 @@ function create_user() {
 
          tmp_json=$(mktemp "${TMPDIR:-/tmp/}$(basename $0).XXXXXXXXXXXX")
          jq 'del(.detached)' ${options_file} > ${tmp_json}
+
+         local home_mount
+         if ! is_json_config_key_on "${options_file}" with_user_home; then
+             home_mount=" --mount type=bind,source=/home/$(whoami),target=/home/$(whoami)"
+         fi
          docker run -it \
                 $(extra_docker_flags run ${tmp_json}) \
                 --name ${name} \
                 --rm \
+                ${home_mount} \
                 ${image_name} \
                 "${to_run}"
          rm ${tmp_json}
