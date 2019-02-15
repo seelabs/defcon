@@ -1,5 +1,36 @@
 # DEFCON: DEFining CONtainers for developing C++ projects
 
+## Quick Start for rippled
+
+Starting in the `defcon` project direction, the following recipies are a quickstart:
+
+### Start a rippled server in a container
+
+```
+scripts/defcon -f projects/rippled/rippled_dogfood.json run user
+```
+
+### Attach to a continer running the rippled server using a shell (or create a new container if one is not running)
+
+
+```
+scripts/defcon -f projects/rippled/rippled_dogfood.json attach user
+```
+
+### Debug a rippled container if rippled core dumps
+
+1) Use the attach command above to create a container with the same image and mount points as the crashed server.
+
+2) Cores will be in the /opt/rippled directory 
+
+2a) For a core to dump, make sure the `kernel.core_pattern` is set on the host
+and cores begin with `core`. `ulimit -c` should also be set to `unlimited.`
+
+3) Once in the container, `cd /opt/rippled` and run `gdb
+/opt/rippled_bld/rippled/build/gcc.debug.unity/rippled <core_name>` where <core
+name> should be replaced with the name of the core file. This will bring up gdb. To get a stack trace,
+run `thread apply all bt` from the gdb prompt.
+
 ## Introduction
 
 Docker can be used for many things. It can be a part of a CI system; it can be
