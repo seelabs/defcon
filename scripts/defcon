@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+DEFCON_VERSION=0.0.0
+
 ################################################################################
 # Global variables that control the build versions of base components
 
@@ -395,6 +397,7 @@ function usage(){
            i.e 'push 1 latest' will run the push <component> latest for all components at priority 1.'
     Valid options are:
      -f config_file : json file of container options
+     -v : show version info
     Valid push subcommands are:
      latest : tag current version as latest when pushing
 EOF
@@ -413,7 +416,7 @@ function array_contains(){
 ################################################################################
 # main
 
-while getopts ":f:" opt; do
+while getopts ":f:v" opt; do
     case $opt in
         f)
             if ! hash jq &>/dev/null; then
@@ -423,6 +426,10 @@ while getopts ":f:" opt; do
             options_file=$(realpath "${OPTARG}")
             load_package_versions "${options_file}"
             shift;shift
+            ;;
+        v)
+            echo "$(basename ${BASH_SOURCE[0]}) Version ${DEFCON_VERSION}"
+            exit 0
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
