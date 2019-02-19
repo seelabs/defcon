@@ -582,7 +582,7 @@ attach_command() {
         source_package_hooks ${component}
         attach_${component} "${@}"
     elif is_valid_package_priority ${component}; then
-        echo "Error: the attach command does not support running all packages at a given priority" >&2
+        echo "Error: the attach command does not support attaching all packages at a given priority" >&2
         exit 1
     else
         echo "Invalid component: ${component}" >&2
