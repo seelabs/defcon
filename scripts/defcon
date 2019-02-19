@@ -565,17 +565,9 @@ run_command() {
         echo "Error: the run command does not support running all packages at a given priority" >&2
         exit 1
     else
-        case ${component} in
-            user-dev)
-                run_user_dev
-                exit 0
-                ;;
-            *)
-                echo "Invalid component: ${component}" >&2
-                usage
-                exit 1
-                ;;
-        esac
+        echo "Invalid component: ${component}" >&2
+        usage
+        exit 1
     fi
 }
 
