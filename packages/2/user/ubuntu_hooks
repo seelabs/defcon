@@ -125,3 +125,40 @@ function attach_user(){
         rm ${tmp_json}
     fi
 }
+
+# TBD: Remove this function and move it to the rippled package.
+# This is a hack until the rippled package work is ready
+function add_validator_token_user(){
+    if [[ -z ${options_file} ]]; then
+        echo "Error: must specify an options file in ${FUNCNAME[0]}" >&2
+        exit 1
+    fi
+
+    if [[ $# -ne 1 ]]; then
+        echo "Error: must specify validator token in ${FUNCNAME[0]}" >&2
+    fi
+
+    local validator_token="${1}"
+
+    if echo "${validator_token}" | grep -q '\[validator_token\]'; then
+        # sed script removes all lines from the start of validator_token up to and including the '[validator_token]' stanza
+        # this is useful, as the validator-keys-tool adds text before the stanza
+        # Note: the echo also combines all the lines into a single line
+        validator_token=$(echo "${validator_token}" | sed '1,/\[validator_token\]/d')
+    else
+        # The echo combines all the lines into a single line
+        validator_token=$(echo "${validator_token}")
+    fi
+
+    local name="user_validator_token${RANDOM}"
+
+    local image_name
+    image_name=$(user_image_name)
+    local to_run="/opt/rippled_bld/rippled_docker_helpers.sh add_validator_token /opt/rippled/rippled.cfg ${validator_token}"
+    docker run -it \
+           $(extra_docker_flags run ${options_file}) \
+           --name ${name} \
+           --rm \
+           ${image_name} \
+           ${to_run}
+}

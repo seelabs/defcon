@@ -69,6 +69,34 @@ function run_rippled_target(){
     return ${result}
 }
 
+function add_validator_token(){
+    # add or replace the validator token in the specified config file
+    if [[ $# -lt 2 ]]; then
+        echo "Error: call to ${FUNCNAME[0]} must specify config file and validator token. Got: ${*}" >&2
+        exit 1
+    fi
+    local config_file="${1}"; shift
+    local validator_token="${*}"
+    if [[ ! -f ${config_file} ]]; then
+        echo "Error: ${FUNCNAME[0]}: Config file ${config_file} does not exist". >&2
+        exit 1
+    fi
+
+    # Remove old validator token
+    # This sed script removes everything from the '[validator_token]' stanza to the first blank line
+    sed -i '/\[validator_token\]/,/^$/d' "${config_file}"
+
+    # Add the new token at the end of the file
+    echo '[validator_token]' >> ${config_file}
+    if echo "${validator_token}" | grep -q '\[validator_token\]'; then
+        # sed script removes all lines from the start of validator_token up to and including the '[validator_token]' stanza
+        # this is useful, as the validator-keys-tool adds text before the stanza
+        echo "${validator_token}" | sed '1,/\[validator_token\]/d' >> ${config_file}
+    else
+        echo "${validator_token}" >> ${config_file}
+    fi
+}
+
 function usage(){
     cat <<EOF >&2
     Usage: ${BASH_SOURCE[0]} [options] <command> <rippled_proj_dir> <build_target>
@@ -106,6 +134,9 @@ case "${command}" in
         ;;
     run)
         run_rippled_target "${@}"
+        ;;
+    add_validator_token)
+        add_validator_token "${@}"
         ;;
     *)
         echo "Invalid command: ${command}" >&2

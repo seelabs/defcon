@@ -17,6 +17,19 @@ scripts/defcon -f projects/rippled/rippled_dogfood.json run user
 scripts/defcon -f projects/rippled/rippled_dogfood.json attach user
 ```
 
+### Add a validator token to a config file once an image is create
+
+```
+scripts/defcon -f projects/rippled/rippled_dogfood.json add_validator_token user "<token>" 
+```
+
+Assuming the validator-keys-tool is available on the host system, the following
+command may also be used (substituting appropriate values for things between "<>", of course).
+
+```
+scripts/defcon -f projects/rippled/rippled_dogfood.json add_validator_token user "$(<path/to/validator-keys> create_token --keyfile </path/to/validator-keys.json)"
+```
+
 ### Debug a rippled container if rippled core dumps
 
 1) Use the attach command above to create a container with the same image and mount points as the crashed server.

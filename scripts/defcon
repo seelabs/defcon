@@ -384,7 +384,7 @@ function load_package_versions () {
 
 ################################################################################
 
-valid_commands=(create run push attach)
+valid_commands=(create run push attach add_validator_token)
 valid_components=(gcc rippled_dev_base base rippled-dev user-dev rippled-deploy rippled-dogfood)
 
 function usage(){
