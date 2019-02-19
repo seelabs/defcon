@@ -144,10 +144,10 @@ function add_validator_token_user(){
         # sed script removes all lines from the start of validator_token up to and including the '[validator_token]' stanza
         # this is useful, as the validator-keys-tool adds text before the stanza
         # Note: the echo also combines all the lines into a single line
-        validator_token=$(echo "${validator_token}" | sed '1,/\[validator_token\]/d')
+        validator_token=$(echo "${validator_token}" | sed '1,/\[validator_token\]/d' | sed 's/ //g')
     else
         # The echo combines all the lines into a single line
-        validator_token=$(echo "${validator_token}")
+        validator_token=$(echo "${validator_token}" | sed 's/ //g')
     fi
 
     local name="user_validator_token${RANDOM}"
