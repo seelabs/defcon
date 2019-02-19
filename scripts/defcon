@@ -551,57 +551,9 @@ function push_command() {
     fi
 }
 
-run_command() {
-    if [[ $# -lt 1 ]]; then
-        echo "Must specify component to run: ${*}." >&2
-        exit 1
-    fi
-
-    local component=${1}; shift
-    if is_valid_package ${component}; then
-        source_package_hooks ${component}
-        run_${component} "${@}"
-    elif is_valid_package_priority ${component}; then
-        echo "Error: the run command does not support running all packages at a given priority" >&2
-        exit 1
-    else
-        echo "Invalid component: ${component}" >&2
-        usage
-        exit 1
-    fi
-}
-
-attach_command() {
-    if [[ $# -lt 1 ]]; then
-        echo "Must specify component to attach: ${*}." >&2
-        exit 1
-    fi
-
-    local component=${1}; shift
-    if is_valid_package ${component}; then
-        source_package_hooks ${component}
-        attach_${component} "${@}"
-    elif is_valid_package_priority ${component}; then
-        echo "Error: the attach command does not support attaching all packages at a given priority" >&2
-        exit 1
-    else
-        echo "Invalid component: ${component}" >&2
-        usage
-        exit 1
-    fi
-}
-
 case ${command} in
     create)
         create_command ${component} "${@}"
-        exit 0
-        ;;
-    run)
-        run_command ${component} "${@}"
-        exit 0
-        ;;
-    attach)
-        attach_command ${component} "${@}"
         exit 0
         ;;
     push)
@@ -609,8 +561,16 @@ case ${command} in
         exit 0
         ;;
     *)
-        echo "Invalid command: ${command}" >&2
-        usage
-        exit 1
+        if is_valid_package ${component}; then
+            source_package_hooks ${component}
+            ${command}_${component} "${@}"
+        elif is_valid_package_priority ${component}; then
+            echo "Error: the ${command} command does not support spcefiying all packages at a given priority" >&2
+            exit 1
+        else
+            echo "Invalid component: ${component}" >&2
+            usage
+            exit 1
+        fi
         ;;
 esac
