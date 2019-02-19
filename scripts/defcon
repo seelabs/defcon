@@ -563,6 +563,11 @@ case ${command} in
     *)
         if is_valid_package ${component}; then
             source_package_hooks ${component}
+            if ! hash ${command}_${component} &>/dev/null; then
+                echo "Invalid command: ${command} to component ${component}" >&2
+                usage
+                exit 1
+            fi
             ${command}_${component} "${@}"
         elif is_valid_package_priority ${component}; then
             echo "Error: the ${command} command does not support spcefiying all packages at a given priority" >&2
