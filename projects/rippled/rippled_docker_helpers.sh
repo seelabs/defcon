@@ -88,7 +88,7 @@ function add_validator_token(){
 
     # Add the new token at the end of the file
     echo '[validator_token]' >> ${config_file}
-    if echo "${validator_token}" | grep -q '\[validator_token\]'; then
+    if grep -q '\[validator_token\]' <<< "${validator_token}"; then
         # sed script removes all lines from the start of validator_token up to and including the '[validator_token]' stanza
         # this is useful, as the validator-keys-tool adds text before the stanza
         echo "${validator_token}" | sed '1,/\[validator_token\]/d' >> ${config_file}

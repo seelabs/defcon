@@ -13,7 +13,7 @@ if [[ ${1} == "install" ]]; then
 else
     QT_VERSION=${1}; shift
     # remove the patch i.e. if QT_VERSION is 5.10.1, QT_VERSION_MAJOR_ will be 5.10
-    QT_VERSION_MAJOR=$(echo "${QT_VERSION}" | awk 'BEGIN {FS="."}{print $1"."$2}')
+    QT_VERSION_MAJOR=$(awk 'BEGIN {FS="."}{print $1"."$2}' <<< "${QT_VERSION}")
 
     apt-get update
     apt-get -y install -y \

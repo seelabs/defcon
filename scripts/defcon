@@ -222,13 +222,13 @@ EOF
         local i
         for i in ${data}; do
             local target
-            target=$(echo "${i}" | jq -cr '.target')
+            target=$(jq -cr '.target' <<< "${i}")
             local source
-            source=$(echo "${i}" | jq -cr '.source')
+            source=$(jq -cr '.source' <<< "${i}")
             local repo
-            repo=$(echo "${i}" | jq -cr '.source.repository?')
+            repo=$(jq -cr '.source.repository?' <<< "${i}")
             local branch
-            branch=$(echo "${i}" | jq -cr '.source.branch?')
+            branch=$(jq -cr '.source.branch?' <<< "${i}")
             if [[ -z ${repo} && -z ${branch} ]]; then
                 local source_path_on_host
                 if [[ ${source} = ./* ]]; then
@@ -349,9 +349,9 @@ function extra_docker_flags(){
             local v
             for v in ${volume_mounts}; do
                 local source
-                source=$(echo ${v} | jq -rc '.source')
+                source=$(jq -rc '.source' <<< ${v})
                 local target
-                target=$(echo ${v} | jq -rc '.target')
+                target=$(jq -rc '.target' <<< ${v})
                 result+=" --mount type=volume,source=${source},target=${target}"
             done
             ;;
